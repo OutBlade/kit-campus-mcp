@@ -1,0 +1,16 @@
+.env
+.venv/
+dumps/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Session cookies, at any level - never commit these.
+cookies.lwp
+
+# Local run state. The CI runner keeps its own copy under state/, which IS
+# committed so the schedule remembers what it has already reported.
+/snapshots.json

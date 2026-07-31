@@ -1,0 +1,407 @@
+{
+  "grades": {
+    "checked_at": "2026-07-31T16:24:59+00:00",
+    "entries": [
+      {
+        "code": "T-ETIT-113001",
+        "title": "Lineare Elektrische Netze",
+        "grade": 2.7,
+        "grade_raw": "2,7",
+        "attempt": "",
+        "status": "",
+        "outcome": "passed",
+        "credits": 6.0,
+        "credits_required": 6.0,
+        "date": "23.03.2026",
+        "kind": "PF",
+        "guid": "0x5F09D344B17B4E76862453FF4361B0A3"
+      },
+      {
+        "code": "T-ETIT-109317",
+        "title": "Lineare Elektrische Netze - Workshop A",
+        "grade": null,
+        "grade_raw": "be",
+        "attempt": "",
+        "status": "",
+        "outcome": "passed",
+        "credits": 1.0,
+        "credits_required": 1.0,
+        "date": "12.12.2025",
+        "kind": "PF",
+        "guid": "0x20F1CE4A18934355A087713E329D4514"
+      },
+      {
+        "code": "T-ETIT-109811",
+        "title": "Lineare Elektrische Netze - Workshop B",
+        "grade": null,
+        "grade_raw": "be",
+        "attempt": "",
+        "status": "",
+        "outcome": "passed",
+        "credits": 1.0,
+        "credits_required": 1.0,
+        "date": "13.02.2026",
+        "kind": "PF",
+        "guid": "0x1AE137BAE0EF47ACB3F735467D83AB2F"
+      },
+      {
+        "code": "T-MATH-103353",
+        "title": "Höhere Mathematik I - Klausur: Höhere Mathematik I (ETIT)",
+        "grade": 2.7,
+        "grade_raw": "2,7",
+        "attempt": "",
+        "status": "",
+        "outcome": "passed",
+        "credits": 11.0,
+        "credits_required": 11.0,
+        "date": "26.02.2026",
+        "kind": "PF",
+        "guid": "0x80338A4DFFA247048AD88C897CF3DCA8"
+      },
+      {
+        "code": "T-PHYS-110163",
+        "title": "Experimentalphysik A",
+        "grade": 2.3,
+        "grade_raw": "2,3",
+        "attempt": "",
+        "status": "",
+        "outcome": "passed",
+        "credits": 6.0,
+        "credits_required": 6.0,
+        "date": "17.03.2026",
+        "kind": "PF",
+        "guid": "0xCAEB35004EBA44A990ABF5AC7616DE84"
+      },
+      {
+        "code": "T-ETIT-101918",
+        "title": "Digitaltechnik",
+        "grade": 2.3,
+        "grade_raw": "2,3",
+        "attempt": "",
+        "status": "",
+        "outcome": "passed",
+        "credits": 6.0,
+        "credits_required": 6.0,
+        "date": "04.03.2026",
+        "kind": "PF",
+        "guid": "0xDDBDF0AEA5C14A65B0479DDF381E6163"
+      },
+      {
+        "code": "T-ETIT-112879",
+        "title": "Informations- und Automatisierungstechnik - Praktikum",
+        "grade": null,
+        "grade_raw": "be",
+        "attempt": "",
+        "status": "",
+        "outcome": "passed",
+        "credits": 2.0,
+        "credits_required": 2.0,
+        "date": "24.07.2026",
+        "kind": "PF",
+        "guid": "0x434A89A5E94B4BDD86CA7E608E13F0FD"
+      }
+    ]
+  },
+  "registered_exams": {
+    "checked_at": "2026-07-31T16:25:00+00:00",
+    "entries": [
+      {
+        "code": "0100060",
+        "title": "Höhere Mathematik II (ETIT)",
+        "examiners": "Anapolitanos",
+        "kind": "Schriftliche Prüfung",
+        "status": "Angemeldet Abmelden bis 10.08.2026 07:59",
+        "registration_code": "AD25334A",
+        "guid": "0xA8AD6E8828DA4BA59B58E925A2A340F3",
+        "dates": [
+          {
+            "weekday": "Mo",
+            "date": "10.08.2026",
+            "start": "08:00",
+            "end": "10:00",
+            "room": "10.21 Carl-Benz-Hörsaal",
+            "raw": "Mo, 10.08.2026 , 08:00 - 10:00 , 10.21 Carl-Benz-Hörsaal"
+          },
+          {
+            "weekday": "Mo",
+            "date": "10.08.2026",
+            "start": "08:00",
+            "end": "10:00",
+            "room": "10.21 Gottlieb-Daimler-Hörsaal",
+            "raw": "Mo, 10.08.2026 , 08:00 - 10:00 , 10.21 Gottlieb-Daimler-Hörsaal"
+          },
+          {
+            "weekday": "Mo",
+            "date": "10.08.2026",
+            "start": "08:00",
+            "end": "10:00",
+            "room": "50.35 Hörsaal am Fasanengarten (HS a.F.)",
+            "raw": "Mo, 10.08.2026 , 08:00 - 10:00 , 50.35 Hörsaal am Fasanengarten (HS a.F.)"
+          }
+        ]
+      },
+      {
+        "code": "0100061",
+        "title": "Höhere Mathematik III (ETIT)",
+        "examiners": "Anapolitanos",
+        "kind": "Schriftliche Prüfung",
+        "status": "Angemeldet Abmelden bis 17.08.2026 07:59",
+        "registration_code": "D1D6A087",
+        "guid": "0x8223C0D857CE4C0BAB3E9E875B8F5BA0",
+        "dates": [
+          {
+            "weekday": "Mo",
+            "date": "17.08.2026",
+            "start": "08:00",
+            "end": "09:30",
+            "room": "30.41 Rudolf-Criegee-Hörsaal (HS4)",
+            "raw": "Mo, 17.08.2026 , 08:00 - 09:30 , 30.41 Rudolf-Criegee-Hörsaal (HS4)"
+          },
+          {
+            "weekday": "Mo",
+            "date": "17.08.2026",
+            "start": "08:00",
+            "end": "09:30",
+            "room": "30.41 Chemie-Hörsaal Nr. 1 (HS1)",
+            "raw": "Mo, 17.08.2026 , 08:00 - 09:30 , 30.41 Chemie-Hörsaal Nr. 1 (HS1)"
+          },
+          {
+            "weekday": "Mo",
+            "date": "17.08.2026",
+            "start": "08:00",
+            "end": "09:30",
+            "room": "30.46 Neuer Hörsaal Chemie",
+            "raw": "Mo, 17.08.2026 , 08:00 - 09:30 , 30.46 Neuer Hörsaal Chemie"
+          },
+          {
+            "weekday": "Mo",
+            "date": "17.08.2026",
+            "start": "08:00",
+            "end": "09:30",
+            "room": "50.35 Hörsaal am Fasanengarten (HS a.F.)",
+            "raw": "Mo, 17.08.2026 , 08:00 - 09:30 , 50.35 Hörsaal am Fasanengarten (HS a.F.)"
+          },
+          {
+            "weekday": "Mo",
+            "date": "17.08.2026",
+            "start": "08:00",
+            "end": "09:30",
+            "room": "11.40 Johann-Gottfried-Tulla-Hörsaal",
+            "raw": "Mo, 17.08.2026 , 08:00 - 09:30 , 11.40 Johann-Gottfried-Tulla-Hörsaal"
+          }
+        ]
+      },
+      {
+        "code": "7300032",
+        "title": "Informations- und Automatisierungstechnik - Praktikum",
+        "examiners": "Barth",
+        "kind": "Prüfungsleistung anderer Art",
+        "status": "Abgeschlossen Abmelden nicht möglich",
+        "registration_code": "86B56F53",
+        "guid": "0x63E2A65C3A0C40559335BFDA4B4C2195"
+      },
+      {
+        "code": "7303185",
+        "title": "Informations- und Automatisierungstechnik",
+        "examiners": "Barth , Teltschik",
+        "kind": "Schriftliche Prüfung",
+        "status": "Angemeldet Abmelden bis 01.09.2026 23:59",
+        "registration_code": "B9EAF48E",
+        "guid": "0x43A21E9A89F84765A6D06430F2773E3C",
+        "dates": [
+          {
+            "weekday": "Mi",
+            "date": "02.09.2026",
+            "start": "08:00",
+            "end": "16:00",
+            "room": "20.21 Pool A",
+            "raw": "Mi, 02.09.2026 , 08:00 - 16:00 , 20.21 Pool A"
+          },
+          {
+            "weekday": "Mi",
+            "date": "02.09.2026",
+            "start": "08:00",
+            "end": "16:00",
+            "room": "20.21 Pool E",
+            "raw": "Mi, 02.09.2026 , 08:00 - 16:00 , 20.21 Pool E"
+          },
+          {
+            "weekday": "Mi",
+            "date": "02.09.2026",
+            "start": "08:00",
+            "end": "16:00",
+            "room": "20.21 Pool B",
+            "raw": "Mi, 02.09.2026 , 08:00 - 16:00 , 20.21 Pool B"
+          },
+          {
+            "weekday": "Mi",
+            "date": "02.09.2026",
+            "start": "08:00",
+            "end": "16:00",
+            "room": "20.21 Pool C",
+            "raw": "Mi, 02.09.2026 , 08:00 - 16:00 , 20.21 Pool C"
+          },
+          {
+            "weekday": "Mi",
+            "date": "02.09.2026",
+            "start": "08:00",
+            "end": "16:00",
+            "room": "20.21 Pool H",
+            "raw": "Mi, 02.09.2026 , 08:00 - 16:00 , 20.21 Pool H"
+          },
+          {
+            "weekday": "Mi",
+            "date": "02.09.2026",
+            "start": "08:00",
+            "end": "16:00",
+            "room": "20.21 Pool D",
+            "raw": "Mi, 02.09.2026 , 08:00 - 16:00 , 20.21 Pool D"
+          },
+          {
+            "weekday": "Mi",
+            "date": "02.09.2026",
+            "start": "08:00",
+            "end": "16:00",
+            "room": "20.21 Pool F",
+            "raw": "Mi, 02.09.2026 , 08:00 - 16:00 , 20.21 Pool F"
+          },
+          {
+            "weekday": "Mi",
+            "date": "02.09.2026",
+            "start": "08:00",
+            "end": "16:00",
+            "room": "20.21 Pool G",
+            "raw": "Mi, 02.09.2026 , 08:00 - 16:00 , 20.21 Pool G"
+          },
+          {
+            "weekday": "Mi",
+            "date": "02.09.2026",
+            "start": "08:00",
+            "end": "16:00",
+            "room": "20.21 Pool I",
+            "raw": "Mi, 02.09.2026 , 08:00 - 16:00 , 20.21 Pool I"
+          },
+          {
+            "weekday": "Mi",
+            "date": "02.09.2026",
+            "start": "08:00",
+            "end": "16:00",
+            "room": "ILIAS",
+            "raw": "Mi, 02.09.2026 , 08:00 - 16:00 , ILIAS"
+          }
+        ]
+      },
+      {
+        "code": "7306200",
+        "title": "Elektrische Energietechnik",
+        "examiners": "Leibfried , Hiller",
+        "kind": "Schriftliche Prüfung",
+        "status": "Angemeldet Abmelden bis 06.08.2026 23:59",
+        "registration_code": "3BB49EB8",
+        "guid": "0x7087A96123A4431A86A9B79C45B04414",
+        "dates": [
+          {
+            "weekday": "Fr",
+            "date": "07.08.2026",
+            "start": "14:00",
+            "end": "16:00",
+            "room": "30.22 Otto-Lehmann-Hörsaal",
+            "raw": "Fr, 07.08.2026 , 14:00 - 16:00 , 30.22 Otto-Lehmann-Hörsaal"
+          },
+          {
+            "weekday": "Fr",
+            "date": "07.08.2026",
+            "start": "14:00",
+            "end": "16:00",
+            "room": "30.35 Hochspannungstechnik-Hörsaal (HSI)",
+            "raw": "Fr, 07.08.2026 , 14:00 - 16:00 , 30.35 Hochspannungstechnik-Hörsaal (HSI)"
+          },
+          {
+            "weekday": "Fr",
+            "date": "07.08.2026",
+            "start": "14:00",
+            "end": "16:00",
+            "room": "30.21 Christian-Gerthsen-Hörsaal",
+            "raw": "Fr, 07.08.2026 , 14:00 - 16:00 , 30.21 Christian-Gerthsen-Hörsaal"
+          },
+          {
+            "weekday": "Fr",
+            "date": "07.08.2026",
+            "start": "14:00",
+            "end": "16:00",
+            "room": "30.22 Wolfgang-Gaede-Hörsaal",
+            "raw": "Fr, 07.08.2026 , 14:00 - 16:00 , 30.22 Wolfgang-Gaede-Hörsaal"
+          },
+          {
+            "weekday": "Fr",
+            "date": "07.08.2026",
+            "start": "14:00",
+            "end": "16:00",
+            "room": "11.10 Engelbert-Arnold-Hörsaal (EAS)",
+            "raw": "Fr, 07.08.2026 , 14:00 - 16:00 , 11.10 Engelbert-Arnold-Hörsaal (EAS)"
+          }
+        ]
+      },
+      {
+        "code": "7308450-1",
+        "title": "Elektronische Schaltungen - Workshop",
+        "examiners": "Zwick , Ulusoy",
+        "kind": "Prüfungsleistung anderer Art",
+        "status": "Angemeldet Abmelden nicht möglich",
+        "registration_code": "91E25F4D",
+        "guid": "0x5F215BC41BD34F31AFCB6E1E7EDE35CB"
+      },
+      {
+        "code": "7308655",
+        "title": "Elektronische Schaltungen",
+        "examiners": "Ulusoy",
+        "kind": "Schriftliche Prüfung",
+        "status": "Angemeldet Abmelden bis 07.09.2026 23:59",
+        "registration_code": "68E53195",
+        "guid": "0xBF773594EA6B400BA12C583680C6FF90",
+        "dates": [
+          {
+            "weekday": "Di",
+            "date": "08.09.2026",
+            "start": "08:00",
+            "end": "10:00",
+            "room": "10.21 Carl-Benz-Hörsaal",
+            "raw": "Di, 08.09.2026 , 08:00 - 10:00 , 10.21 Carl-Benz-Hörsaal"
+          },
+          {
+            "weekday": "Di",
+            "date": "08.09.2026",
+            "start": "08:00",
+            "end": "10:00",
+            "room": "10.21 Gottlieb-Daimler-Hörsaal",
+            "raw": "Di, 08.09.2026 , 08:00 - 10:00 , 10.21 Gottlieb-Daimler-Hörsaal"
+          },
+          {
+            "weekday": "Di",
+            "date": "08.09.2026",
+            "start": "08:00",
+            "end": "10:00",
+            "room": "10.11 Hertz-Hörsaal",
+            "raw": "Di, 08.09.2026 , 08:00 - 10:00 , 10.11 Hertz-Hörsaal"
+          },
+          {
+            "weekday": "Di",
+            "date": "08.09.2026",
+            "start": "08:00",
+            "end": "10:00",
+            "room": "30.95 Audimax",
+            "raw": "Di, 08.09.2026 , 08:00 - 10:00 , 30.95 Audimax"
+          },
+          {
+            "weekday": "Di",
+            "date": "08.09.2026",
+            "start": "08:00",
+            "end": "10:00",
+            "room": "50.35 Hörsaal am Fasanengarten (HS a.F.)",
+            "raw": "Di, 08.09.2026 , 08:00 - 10:00 , 50.35 Hörsaal am Fasanengarten (HS a.F.)"
+          }
+        ]
+      }
+    ]
+  }
+}

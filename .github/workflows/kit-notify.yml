@@ -1,0 +1,58 @@
+name: KIT Notenbenachrichtigung
+
+# Checks the KIT portal on a schedule and sends a Telegram message when a
+# result appears or an exam registration changes. Also answers any chat
+# commands (/noten, /pruefungen, ...) that arrived since the previous run.
+on:
+  schedule:
+    # Hourly. GitHub queues scheduled runs, so the actual time drifts by a few
+    # minutes - that is fine for exam results, which are published in batches.
+    - cron: "17 * * * *"
+  workflow_dispatch: # lets you trigger a run by hand from the Actions tab
+
+# Never let two runs touch the committed state at the same time.
+concurrency:
+  group: kit-notify
+  cancel-in-progress: false
+
+permissions:
+  contents: write # to commit the updated state back to the repository
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install --quiet -e .
+
+      - name: Check KIT and notify
+        env:
+          KIT_USERNAME: ${{ secrets.KIT_USERNAME }}
+          KIT_PASSWORD: ${{ secrets.KIT_PASSWORD }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # State lives in the repo so the schedule remembers what it reported.
+          KIT_CAMPUS_STATE_DIR: ${{ github.workspace }}/state
+          KIT_LANGUAGE: de
+        run: python examples/telegram_bot.py --once
+
+      - name: Persist state
+        run: |
+          # cookies.lwp is gitignored - only the snapshot and the Telegram
+          # offset are committed.
+          if [ -n "$(git status --porcelain state)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add state
+            git commit -m "State: KIT check $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push
+          else
+            echo "No state change."
+          fi
