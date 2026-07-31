@@ -50,11 +50,17 @@ HELP = (
 
 
 class Telegram:
-    """The three Bot API calls this script needs."""
+    """The three Bot API calls this script needs.
+
+    `chat_id` may be a comma-separated list, so a study group all working
+    towards the same exams gets the same alerts. Put the bot in a Telegram group
+    and use the group's id (negative number) to reach everyone at once.
+    """
 
     def __init__(self, token: str, chat_id: str) -> None:
         self.token = token
-        self.chat_id = chat_id
+        self.recipients = [c.strip() for c in chat_id.split(",") if c.strip()]
+        self.chat_id = self.recipients[0] if self.recipients else ""
         self._client = httpx.AsyncClient(timeout=70)
 
     async def close(self) -> None:
@@ -66,20 +72,22 @@ class Telegram:
         A notifier that swallows delivery errors is worse than one that crashes:
         the run would go green while the message never arrived.
         """
-        for chunk in _split(text):
-            response = await self._client.post(
-                API.format(token=self.token, method="sendMessage"),
-                json={
-                    "chat_id": chat_id or self.chat_id,
-                    "text": chunk,
-                    "disable_web_page_preview": True,
-                },
-            )
-            if response.status_code != 200 or not response.json().get("ok"):
-                raise RuntimeError(
-                    f"Telegram refused the message (HTTP {response.status_code}): "
-                    f"{response.text[:200]}"
+        targets = [chat_id] if chat_id else self.recipients
+        for target in targets:
+            for chunk in _split(text):
+                response = await self._client.post(
+                    API.format(token=self.token, method="sendMessage"),
+                    json={
+                        "chat_id": target,
+                        "text": chunk,
+                        "disable_web_page_preview": True,
+                    },
                 )
+                if response.status_code != 200 or not response.json().get("ok"):
+                    raise RuntimeError(
+                        f"Telegram refused the message to {target} "
+                        f"(HTTP {response.status_code}): {response.text[:200]}"
+                    )
 
     async def updates(self, offset: int, timeout: int = 30) -> list[dict]:
         response = await self._client.get(
@@ -251,7 +259,8 @@ async def drain_commands(bot: Telegram) -> int:
         message = update.get("message") or {}
         text = message.get("text")
         chat_id = str((message.get("chat") or {}).get("id", ""))
-        if not text or not text.startswith("/") or chat_id != bot.chat_id:
+        # Only configured chats may query; /noten shows your grades.
+        if not text or not text.startswith("/") or chat_id not in bot.recipients:
             continue
         try:
             reply = await handle_command(text)
@@ -277,7 +286,7 @@ async def command_loop(bot: Telegram) -> None:
                 chat_id = str((message.get("chat") or {}).get("id", ""))
                 if not text or not text.startswith("/"):
                     continue
-                if chat_id != bot.chat_id:
+                if chat_id not in bot.recipients:
                     print(f"Ignoring command from unknown chat {chat_id}")
                     continue
                 try:
