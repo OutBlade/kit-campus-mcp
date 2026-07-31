@@ -130,7 +130,43 @@ then message your own bot once and open
 The first run stores a baseline and stays quiet, so you do not get a message for
 every result you already have. After that, only new or changed results are sent.
 
-Run it as a scheduled task to keep it alive across reboots:
+## Hosted on GitHub Actions
+
+`.github/workflows/kit-notify.yml` runs the check hourly on GitHub's servers, so
+nothing has to stay switched on at home. It is free (private repos get 2000
+Actions minutes a month; a run takes about a minute) and needs no credit card.
+
+Four repository secrets drive it - `KIT_USERNAME`, `KIT_PASSWORD`,
+`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`:
+
+```bash
+gh secret set KIT_USERNAME
+```
+
+The snapshot lives in `state/snapshots.json` and is committed back by the
+workflow after every run, which is how a stateless runner remembers what it has
+already reported. Session cookies are gitignored and never leave the runner.
+
+**Keep the repository private** - the snapshot contains your results.
+
+Trigger a run by hand, optionally sending the current standing as a health
+check:
+
+```bash
+gh workflow run kit-notify.yml -f ping=true
+```
+
+Chat commands still work on a schedule: each run answers whatever arrived since
+the last one, so a `/noten` is replied to within the hour rather than instantly.
+For instant replies, run the bot locally (or on any always-on host) without
+`--once`.
+
+Two things worth knowing about GitHub's cron: scheduled runs are queued and can
+drift by 5-15 minutes, and a repository with no activity for 60 days has its
+schedules disabled. The state commit after each run counts as activity, so that
+timer never runs down while results are coming in.
+
+To run it locally on a timer instead:
 
 ```powershell
 schtasks /create /tn "KIT Noten" /tr "C:\Users\blade\kit-campus-mcp\.venv\Scripts\python.exe C:\Users\blade\kit-campus-mcp\examples\telegram_bot.py --once" /sc hourly

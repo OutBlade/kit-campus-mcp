@@ -9,6 +9,11 @@ on:
     # minutes - that is fine for exam results, which are published in batches.
     - cron: "17 * * * *"
   workflow_dispatch: # lets you trigger a run by hand from the Actions tab
+    inputs:
+      ping:
+        description: "Also send the current standing to Telegram (health check)"
+        type: boolean
+        default: false
 
 # Never let two runs touch the committed state at the same time.
 concurrency:
@@ -41,7 +46,9 @@ jobs:
           # State lives in the repo so the schedule remembers what it reported.
           KIT_CAMPUS_STATE_DIR: ${{ github.workspace }}/state
           KIT_LANGUAGE: de
-        run: python examples/telegram_bot.py --once
+        run: |
+          python examples/telegram_bot.py --once \
+            ${{ inputs.ping && '--ping' || '' }}
 
       - name: Persist state
         run: |

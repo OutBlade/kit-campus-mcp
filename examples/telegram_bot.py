@@ -298,6 +298,11 @@ async def watch_loop(bot: Telegram, interval: int) -> None:
 async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--once", action="store_true", help="poll once and exit")
+    parser.add_argument(
+        "--ping",
+        action="store_true",
+        help="send the current standing to the chat, to prove the pipeline works",
+    )
     parser.add_argument("--interval", type=int, default=1800, help="seconds between polls")
     parser.add_argument(
         "--no-commands", action="store_true", help="only notify, do not answer chat commands"
@@ -313,6 +318,12 @@ async def main() -> int:
 
     bot = Telegram(token, chat_id)
     try:
+        if args.ping:
+            await bot.send(await handle_command("/status"))
+            print("Ping sent.")
+            if not args.once:
+                return 0
+
         if args.once:
             messages = await poll_kit()
             if messages:
