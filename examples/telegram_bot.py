@@ -61,8 +61,13 @@ class Telegram:
         await self._client.aclose()
 
     async def send(self, text: str, chat_id: str | None = None) -> None:
+        """Send a message, failing loudly.
+
+        A notifier that swallows delivery errors is worse than one that crashes:
+        the run would go green while the message never arrived.
+        """
         for chunk in _split(text):
-            await self._client.post(
+            response = await self._client.post(
                 API.format(token=self.token, method="sendMessage"),
                 json={
                     "chat_id": chat_id or self.chat_id,
@@ -70,6 +75,11 @@ class Telegram:
                     "disable_web_page_preview": True,
                 },
             )
+            if response.status_code != 200 or not response.json().get("ok"):
+                raise RuntimeError(
+                    f"Telegram refused the message (HTTP {response.status_code}): "
+                    f"{response.text[:200]}"
+                )
 
     async def updates(self, offset: int, timeout: int = 30) -> list[dict]:
         response = await self._client.get(
