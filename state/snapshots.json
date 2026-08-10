@@ -1,6 +1,6 @@
 {
   "grades": {
-    "checked_at": "2026-08-10T04:54:13+00:00",
+    "checked_at": "2026-08-10T06:41:57+00:00",
     "entries": [
       {
         "code": "T-ETIT-113001",
@@ -103,14 +103,14 @@
     ]
   },
   "registered_exams": {
-    "checked_at": "2026-08-10T04:54:14+00:00",
+    "checked_at": "2026-08-10T06:41:58+00:00",
     "entries": [
       {
         "code": "0100060",
         "title": "Höhere Mathematik II (ETIT)",
         "examiners": "Anapolitanos",
         "kind": "Schriftliche Prüfung",
-        "status": "Angemeldet Abmelden bis 10.08.2026 07:59",
+        "status": "Angemeldet Abmelden nicht möglich",
         "registration_code": "AD25334A",
         "guid": "0xA8AD6E8828DA4BA59B58E925A2A340F3",
         "dates": [
