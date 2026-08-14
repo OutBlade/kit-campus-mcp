@@ -1,6 +1,6 @@
 {
   "grades": {
-    "checked_at": "2026-08-14T10:16:15+00:00",
+    "checked_at": "2026-08-14T11:10:43+00:00",
     "entries": [
       {
         "code": "T-ETIT-113001",
@@ -103,7 +103,7 @@
     ]
   },
   "registered_exams": {
-    "checked_at": "2026-08-14T10:16:15+00:00",
+    "checked_at": "2026-08-14T11:10:44+00:00",
     "entries": [
       {
         "code": "0100060",
@@ -154,8 +154,8 @@
             "date": "17.08.2026",
             "start": "08:00",
             "end": "09:30",
-            "room": "30.41 Chemie-Hörsaal Nr. 1 (HS1)",
-            "raw": "Mo, 17.08.2026 , 08:00 - 09:30 , 30.41 Chemie-Hörsaal Nr. 1 (HS1)"
+            "room": "50.35 Hörsaal am Fasanengarten (HS a.F.)",
+            "raw": "Mo, 17.08.2026 , 08:00 - 09:30 , 50.35 Hörsaal am Fasanengarten (HS a.F.)"
           },
           {
             "weekday": "Mo",
@@ -170,24 +170,8 @@
             "date": "17.08.2026",
             "start": "08:00",
             "end": "09:30",
-            "room": "30.41 Rudolf-Criegee-Hörsaal (HS4)",
-            "raw": "Mo, 17.08.2026 , 08:00 - 09:30 , 30.41 Rudolf-Criegee-Hörsaal (HS4)"
-          },
-          {
-            "weekday": "Mo",
-            "date": "17.08.2026",
-            "start": "08:00",
-            "end": "09:30",
             "room": "30.46 Neuer Hörsaal Chemie",
             "raw": "Mo, 17.08.2026 , 08:00 - 09:30 , 30.46 Neuer Hörsaal Chemie"
-          },
-          {
-            "weekday": "Mo",
-            "date": "17.08.2026",
-            "start": "08:00",
-            "end": "09:30",
-            "room": "50.35 Hörsaal am Fasanengarten (HS a.F.)",
-            "raw": "Mo, 17.08.2026 , 08:00 - 09:30 , 50.35 Hörsaal am Fasanengarten (HS a.F.)"
           }
         ]
       },
