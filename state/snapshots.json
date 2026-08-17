@@ -1,6 +1,6 @@
 {
   "grades": {
-    "checked_at": "2026-08-17T05:50:01+00:00",
+    "checked_at": "2026-08-17T07:16:10+00:00",
     "entries": [
       {
         "code": "T-ETIT-113001",
@@ -103,7 +103,7 @@
     ]
   },
   "registered_exams": {
-    "checked_at": "2026-08-17T05:50:02+00:00",
+    "checked_at": "2026-08-17T07:16:11+00:00",
     "entries": [
       {
         "code": "0100060",
@@ -145,7 +145,7 @@
         "title": "Höhere Mathematik III (ETIT)",
         "examiners": "Anapolitanos",
         "kind": "Schriftliche Prüfung",
-        "status": "Angemeldet Abmelden bis 17.08.2026 07:59",
+        "status": "Angemeldet Abmelden nicht möglich",
         "registration_code": "D1D6A087",
         "guid": "0x8223C0D857CE4C0BAB3E9E875B8F5BA0",
         "dates": [
