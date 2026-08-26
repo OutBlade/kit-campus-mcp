@@ -1,6 +1,6 @@
 {
   "grades": {
-    "checked_at": "2026-08-26T07:08:38+00:00",
+    "checked_at": "2026-08-26T07:59:05+00:00",
     "entries": [
       {
         "code": "T-ETIT-113001",
@@ -73,6 +73,20 @@
         "guid": "0xCAEB35004EBA44A990ABF5AC7616DE84"
       },
       {
+        "code": "T-ETIT-109138",
+        "title": "Elektronische Schaltungen - Workshop",
+        "grade": null,
+        "grade_raw": "(be)",
+        "attempt": "",
+        "status": "",
+        "outcome": "failed",
+        "credits": 0.0,
+        "credits_required": 1.0,
+        "date": "26.06.2026",
+        "kind": "PF",
+        "guid": "0xF07D2BB9A0484C4CA0701B2F8E8C6D3A"
+      },
+      {
         "code": "T-ETIT-101918",
         "title": "Digitaltechnik",
         "grade": 2.3,
@@ -103,7 +117,7 @@
     ]
   },
   "registered_exams": {
-    "checked_at": "2026-08-26T07:08:40+00:00",
+    "checked_at": "2026-08-26T07:59:07+00:00",
     "entries": [
       {
         "code": "0100060",
