@@ -1,6 +1,6 @@
 {
   "grades": {
-    "checked_at": "2026-09-02T09:37:16+00:00",
+    "checked_at": "2026-09-02T14:29:11+00:00",
     "entries": [
       {
         "code": "T-ETIT-113001",
@@ -73,14 +73,28 @@
         "guid": "0xCAEB35004EBA44A990ABF5AC7616DE84"
       },
       {
-        "code": "T-ETIT-109138",
-        "title": "Elektronische Schaltungen - Workshop",
+        "code": "T-MATH-103354",
+        "title": "Höhere Mathematik II - Klausur: Höhere Mathematik II (ETIT)",
         "grade": null,
-        "grade_raw": "(be)",
+        "grade_raw": "(3,0)",
         "attempt": "",
         "status": "",
         "outcome": "failed",
         "credits": 0.0,
+        "credits_required": 8.0,
+        "date": "10.08.2026",
+        "kind": "PF",
+        "guid": "0x3AC76CBBA68F4845BA814394FF9E36A8"
+      },
+      {
+        "code": "T-ETIT-109138",
+        "title": "Elektronische Schaltungen - Workshop",
+        "grade": null,
+        "grade_raw": "be",
+        "attempt": "",
+        "status": "",
+        "outcome": "passed",
+        "credits": 1.0,
         "credits_required": 1.0,
         "date": "26.06.2026",
         "kind": "PF",
@@ -117,7 +131,7 @@
     ]
   },
   "registered_exams": {
-    "checked_at": "2026-09-02T09:37:17+00:00",
+    "checked_at": "2026-09-02T14:29:12+00:00",
     "entries": [
       {
         "code": "0100060",
@@ -294,7 +308,7 @@
         "title": "Elektronische Schaltungen - Workshop",
         "examiners": "Zwick , Ulusoy",
         "kind": "Prüfungsleistung anderer Art",
-        "status": "Angemeldet Abmelden nicht möglich",
+        "status": "Abgeschlossen Abmelden nicht möglich",
         "registration_code": "91E25F4D",
         "guid": "0x5F215BC41BD34F31AFCB6E1E7EDE35CB"
       },
