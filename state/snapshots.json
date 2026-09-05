@@ -1,6 +1,6 @@
 {
   "grades": {
-    "checked_at": "2026-09-05T21:14:22+00:00",
+    "checked_at": "2026-09-05T22:56:02+00:00",
     "entries": [
       {
         "code": "T-ETIT-113001",
@@ -127,11 +127,25 @@
         "date": "24.07.2026",
         "kind": "PF",
         "guid": "0x434A89A5E94B4BDD86CA7E608E13F0FD"
+      },
+      {
+        "code": "T-ETIT-111530",
+        "title": "Aktionstag: Gemeinsam führen! Zusammenarbeit gestalten - im Team wachsen",
+        "grade": null,
+        "grade_raw": "be",
+        "attempt": "",
+        "status": "",
+        "outcome": "passed",
+        "credits": 1.0,
+        "credits_required": 1.0,
+        "date": "25.08.2026",
+        "kind": "WP",
+        "guid": "0x4925B5A1606B4324B32F735477C3A469"
       }
     ]
   },
   "registered_exams": {
-    "checked_at": "2026-09-05T21:14:23+00:00",
+    "checked_at": "2026-09-05T22:56:03+00:00",
     "entries": [
       {
         "code": "0100060",
