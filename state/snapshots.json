@@ -1,6 +1,6 @@
 {
   "grades": {
-    "checked_at": "2026-09-07T20:35:02+00:00",
+    "checked_at": "2026-09-07T23:29:40+00:00",
     "entries": [
       {
         "code": "T-ETIT-113001",
@@ -145,7 +145,7 @@
     ]
   },
   "registered_exams": {
-    "checked_at": "2026-09-07T20:35:03+00:00",
+    "checked_at": "2026-09-07T23:29:41+00:00",
     "entries": [
       {
         "code": "0100060",
@@ -331,7 +331,7 @@
         "title": "Elektronische Schaltungen",
         "examiners": "Ulusoy",
         "kind": "Schriftliche Prüfung",
-        "status": "Angemeldet Abmelden bis 07.09.2026 23:59",
+        "status": "Angemeldet Abmelden nicht möglich",
         "registration_code": "68E53195",
         "guid": "0xBF773594EA6B400BA12C583680C6FF90",
         "dates": [
