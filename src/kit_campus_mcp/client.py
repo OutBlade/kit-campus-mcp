@@ -7,12 +7,13 @@ Public catalogue calls work without credentials; everything under
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from typing import Any
 from urllib.parse import quote, urljoin
 
-from .auth import KitError, KitSession
+from .auth import KitError, KitSession, safe_url
 from .config import CAMPUS_BASE, PATHS, SERVICES, Settings, load_settings
 from .parsers import (
     ListTable,
@@ -271,8 +272,8 @@ class KitCampusClient:
             return json.loads(html)
         except json.JSONDecodeError:
             raise KitError(
-                f"The {name} service did not return JSON (from {final}). "
-                f"First bytes: {html[:120]!r}"
+                f"The {name} service did not return JSON (from {safe_url(final)}). "
+                "KIT may be unavailable or its response format may have changed."
             ) from None
 
     async def whoami(self) -> dict[str, str]:
@@ -346,10 +347,27 @@ class KitCampusClient:
         html, final = await self.session.fetch_authenticated(_url("study_tree", pguid=guid))
         nodes = parse_study_tree(html)
         if not nodes:
+            # A stale CAS session or an intermittent HTTP-200 error page can
+            # arrive even after portal SSO succeeded. Refresh once, then fail
+            # visibly rather than accepting an empty result as a new baseline.
+            await asyncio.sleep(2)
+            await self.session.token(force=True)
+            html, final = await self.session.fetch_authenticated(_url("study_tree", pguid=guid))
+            nodes = parse_study_tree(html)
+        if not nodes:
+            from bs4 import BeautifulSoup
+
+            soup = BeautifulSoup(html, "html.parser")
+            table_ids = [table.get("id", "(no id)") for table in soup.find_all("table")][:10]
+            row_classes = sorted({
+                cls for row in soup.find_all("tr") for cls in row.get("class", [])
+                if re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{0,40}", cls)
+            })[:20]
             raise KitError(
-                f"No study tree found on {final}. Run "
-                f"`kit-campus dump \"student/contractview.asp?gguid={guid}\"` "
-                "and check which tables the page contains."
+                f"No study tree found after refreshing the session on {safe_url(final)}. "
+                f"Tables: {table_ids!r}; row classes: {row_classes!r}. "
+                "Previous results have not been replaced. KIT may be unavailable "
+                "or its page layout may have changed."
             )
         return nodes, guid, final
 

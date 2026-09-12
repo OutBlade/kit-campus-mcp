@@ -20,8 +20,10 @@ failing silently.
 
 from __future__ import annotations
 
+import asyncio
 import http.cookiejar
 import json
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -46,6 +48,9 @@ MAX_HOPS = 12
 
 # token.php hands out a token valid for a few minutes; refresh a little early.
 TOKEN_TTL_SECONDS = 240
+REQUEST_ATTEMPTS = 3
+RETRY_STATUSES = {408, 429, 500, 502, 503, 504}
+logger = logging.getLogger(__name__)
 
 
 class KitError(RuntimeError):
@@ -58,6 +63,25 @@ class KitLoginError(KitError):
 
 class KitAuthRequiredError(KitError):
     """A page needed a session but none was available."""
+
+
+def safe_url(url: str) -> str:
+    """Describe an endpoint without its login token, query, or fragment."""
+    parsed = urlparse(str(url))
+    return f"{parsed.scheme}://{parsed.hostname or ''}{parsed.path}"
+
+
+class KitRequestError(KitError):
+    """A request failed, with a diagnostic that contains no credentials."""
+
+
+def _retry_delay(response: httpx.Response | None, attempt: int) -> float:
+    if response is not None:
+        try:
+            return min(30.0, max(0.0, float(response.headers["Retry-After"])))
+        except (KeyError, ValueError):
+            pass  # An absent or nonnumeric header uses the bounded backoff.
+    return 2.0 ** attempt
 
 
 @dataclass
@@ -237,13 +261,47 @@ class KitSession:
 
     async def get(self, url: str, **kwargs: Any) -> tuple[str, str]:
         """GET a URL. Returns (decoded_html, final_url)."""
-        response = await self._client.get(url, **kwargs)
+        response = await self._request("GET", url, **kwargs)
         return _decode(response), str(response.url)
 
     async def post(self, url: str, data: dict[str, str], **kwargs: Any) -> tuple[str, str]:
         """POST form data. Returns (decoded_html, final_url)."""
-        response = await self._client.post(url, data=data, **kwargs)
+        response = await self._request("POST", url, data=data, **kwargs)
         return _decode(response), str(response.url)
+
+    async def _request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
+        """Retry read requests only; never replay a password or SAML POST."""
+        attempts = REQUEST_ATTEMPTS if method == "GET" else 1
+        for attempt in range(1, attempts + 1):
+            response = None
+            try:
+                response = await self._client.request(method, url, **kwargs)
+            except (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError) as exc:
+                reason = type(exc).__name__
+            except httpx.HTTPError as exc:
+                raise KitRequestError(
+                    f"{method} {safe_url(url)} failed ({type(exc).__name__})."
+                ) from None
+            else:
+                if response.status_code < 400:
+                    return response
+                reason = f"HTTP {response.status_code}"
+                if response.status_code not in RETRY_STATUSES:
+                    raise KitRequestError(
+                        f"{method} {safe_url(response.url)} failed ({reason})."
+                    ) from None
+            if attempt == attempts:
+                raise KitRequestError(
+                    f"{method} {safe_url(url)} failed after {attempts} "
+                    f"attempt(s) ({reason}). No result data was read."
+                ) from None
+            delay = _retry_delay(response, attempt)
+            logger.warning(
+                "%s %s: %s; retry %d/%d in %.0fs",
+                method, safe_url(url), reason, attempt + 1, attempts, delay,
+            )
+            await asyncio.sleep(delay)
+        raise AssertionError("unreachable")
 
     async def submit(self, form: HtmlForm) -> tuple[str, str]:
         if form.method == "post":
@@ -275,7 +333,7 @@ class KitSession:
         if not data.get("tokenA"):
             raise KitAuthRequiredError(
                 f"Logged in, but {TOKEN_URL} returned no token (landed on "
-                f"{final}). The account may not be an active student account, "
+                f"{safe_url(final)}). The account may not be an active student account, "
                 "or KIT changed the portal."
             )
         self._token = KitToken(
@@ -302,7 +360,7 @@ class KitSession:
         token = await self.token()
         html, final = await self.walk_sso(*await self.get(_with_token(url, token)))
         if not _needs_login(html, final):
-            return html, final
+            return html, safe_url(final)
         # Token expired mid-flight, or the app session was dropped: get a fresh
         # one (logging in again if even that fails) and retry once.
         token = await self.token(force=True)
@@ -310,9 +368,9 @@ class KitSession:
         if _needs_login(html, final):
             raise KitAuthRequiredError(
                 f"Still not authenticated after refreshing the token (landed on "
-                f"{final}). The account may not have access to this page."
+                f"{safe_url(final)}). The account may not have access to this page."
             )
-        return html, final
+        return html, safe_url(final)
 
     async def login(self) -> str:
         """Run the full Shibboleth login. Returns the URL that was landed on."""
@@ -382,7 +440,7 @@ class KitSession:
             raise KitLoginError(_unknown_step_message(html, url, forms))
 
         raise KitLoginError(
-            f"Login did not finish within {MAX_HOPS} redirects (last URL: {url})."
+            f"Login did not finish within {MAX_HOPS} redirects (last URL: {safe_url(url)})."
         )
 
     @property
@@ -430,7 +488,7 @@ def _unknown_step_message(html: str, url: str, forms: list[HtmlForm]) -> str:
         )
     return (
         f"The SSO flow stopped at an unexpected step.\n"
-        f"  URL:    {url}\n"
+        f"  URL:    {safe_url(url)}\n"
         f"  Title:  {title}\n"
         f"  Fields: {', '.join(field_names) or '(no form fields)'}{hint}"
     )

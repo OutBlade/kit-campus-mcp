@@ -8,7 +8,7 @@ check** - which is what a notification bot needs.
 ## How it works
 
 `campus.studium.kit.edu` is only a KIT-branded frame. The application behind it
-is CAS Campus at `https://campus.kit.edu/sp`, and the frame's own
+is CAS Campus at `https://cascampus.studium.kit.edu`, and the frame's own
 `kit-frame-config.js` maps every portal page to a backend URL. This server talks
 to those backend URLs directly.
 
@@ -29,7 +29,7 @@ actually does:
 2. call `campus.studium.kit.edu/token.php`, which returns a short-lived
    `tokenA` plus the account's name and matriculation number
 3. pass that token to the backend as `login-token` + `login-ts` on any
-   `campus.kit.edu` URL, which is what creates the CAS Campus session
+   `cascampus.studium.kit.edu` URL, which is what creates the CAS Campus session
 
 This server does the same three steps. Cookies and the token are cached, so
 repeated polls do not re-run the SSO chain.
@@ -155,6 +155,25 @@ check:
 ```bash
 gh workflow run kit-notify.yml -f ping=true
 ```
+
+For a read-only verification with the configured KIT secrets, select
+**Run workflow → check_only**, or run:
+
+```bash
+gh workflow run kit-notify.yml -f check_only=true
+```
+
+This mode reads the study tree and exam registrations without sending Telegram
+messages, answering commands, or changing the result snapshots.
+
+Temporary GET failures (timeouts, connection errors, HTTP 408/429/500/502/503/504)
+are retried up to three attempts with bounded delays. Login and SAML POSTs are
+not replayed. A missing study tree triggers one token refresh and reread. If KIT
+still does not return valid results, the job stays failed and preserves the last
+snapshot rather than reporting an empty list as a successful check. Diagnostics
+omit login tokens and response bodies.
+
+Run the offline regression checks with `python -m unittest discover -s tests -v`.
 
 Chat commands still work on a schedule: each run answers whatever arrived since
 the last one, so a `/noten` is replied to within the hour rather than instantly.

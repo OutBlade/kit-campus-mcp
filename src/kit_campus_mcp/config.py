@@ -9,8 +9,8 @@ from pathlib import Path
 # CAS Campus is the application behind campus.studium.kit.edu. The portal at
 # campus.studium.kit.edu is only a KIT-branded frame; kit-frame-config.js maps
 # every portal page to one of the backend URLs below.
-CAMPUS_BASE = "https://campus.kit.edu/sp"
-CAMPUS_HOST = "https://campus.kit.edu"
+CAMPUS_BASE = "https://cascampus.studium.kit.edu"
+CAMPUS_HOST = CAMPUS_BASE
 IDP_HOST = "https://idp.scc.kit.edu"
 
 # Login happens on the portal, not on campus.kit.edu: the portal holds the

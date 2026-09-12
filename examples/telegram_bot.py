@@ -27,6 +27,7 @@ import httpx
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from kit_campus_mcp.client import KitCampusClient
+from kit_campus_mcp.auth import KitError
 from kit_campus_mcp.config import load_settings
 from kit_campus_mcp.watch import (
     EXAM_KEY,
@@ -318,6 +319,10 @@ async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--once", action="store_true", help="poll once and exit")
     parser.add_argument(
+        "--check-only", action="store_true",
+        help="verify KIT reads without Telegram or snapshot changes",
+    )
+    parser.add_argument(
         "--ping",
         action="store_true",
         help="send the current standing to the chat, to prove the pipeline works",
@@ -329,6 +334,12 @@ async def main() -> int:
     args = parser.parse_args()
 
     load_settings()  # loads .env so the Telegram values below are available
+    if args.check_only:
+        async with KitCampusClient() as client:
+            await client.get_grades()
+            await client.list_registered_exams()
+        print("KIT check succeeded: study tree and exam registrations read. No notifications or snapshot changes.")
+        return 0
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     if not token or not chat_id:
@@ -370,3 +381,6 @@ if __name__ == "__main__":
         sys.exit(asyncio.run(main()))
     except KeyboardInterrupt:
         sys.exit(130)
+    except KitError as exc:
+        print(f"KIT check failed: {exc}", file=sys.stderr)
+        sys.exit(1)

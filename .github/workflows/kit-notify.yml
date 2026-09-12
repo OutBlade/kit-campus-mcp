@@ -10,6 +10,10 @@ on:
     - cron: "17 * * * *"
   workflow_dispatch: # lets you trigger a run by hand from the Actions tab
     inputs:
+      check_only:
+        description: "Verify KIT reads without Telegram messages or snapshot changes"
+        type: boolean
+        default: false
       ping:
         description: "Also send the current standing to Telegram (health check)"
         type: boolean
@@ -46,11 +50,19 @@ jobs:
           # State lives in the repo so the schedule remembers what it reported.
           KIT_CAMPUS_STATE_DIR: ${{ github.workspace }}/state
           KIT_LANGUAGE: de
+          CHECK_ONLY: ${{ inputs.check_only }}
+          PING: ${{ inputs.ping }}
         run: |
-          python examples/telegram_bot.py --once \
-            ${{ inputs.ping && '--ping' || '' }}
+          if [ "$CHECK_ONLY" = "true" ]; then
+            python examples/telegram_bot.py --check-only
+          elif [ "$PING" = "true" ]; then
+            python examples/telegram_bot.py --once --ping
+          else
+            python examples/telegram_bot.py --once
+          fi
 
       - name: Persist state
+        if: ${{ !inputs.check_only }}
         run: |
           # cookies.lwp is gitignored - only the snapshot and the Telegram
           # offset are committed.
