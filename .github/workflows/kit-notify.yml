@@ -42,6 +42,7 @@ jobs:
         run: pip install --quiet -e .
 
       - name: Check KIT and notify
+        id: campus
         env:
           KIT_USERNAME: ${{ secrets.KIT_USERNAME }}
           KIT_PASSWORD: ${{ secrets.KIT_PASSWORD }}
@@ -53,6 +54,8 @@ jobs:
           CHECK_ONLY: ${{ inputs.check_only }}
           PING: ${{ inputs.ping }}
         run: |
+          # Capture only the program's exit code; unexpected errors still fail.
+          set +e
           if [ "$CHECK_ONLY" = "true" ]; then
             python examples/telegram_bot.py --check-only
           elif [ "$PING" = "true" ]; then
@@ -60,9 +63,28 @@ jobs:
           else
             python examples/telegram_bot.py --once
           fi
+          status=$?
+          set -e
+          case "$status" in
+            0)
+              echo "status=checked" >> "$GITHUB_OUTPUT"
+              echo "### KIT check completed" >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            75)
+              echo "status=deferred" >> "$GITHUB_OUTPUT"
+              echo "::warning title=KIT temporarily unavailable::Poll deferred after bounded retries. Previous results remain unchanged; the next scheduled run will retry."
+              {
+                echo "### DEFERRED: KIT temporarily unavailable"
+                echo "The portal did not provide results after retries. This is not a successful results check."
+                echo "No result snapshot or Telegram offset will be committed. The next scheduled run retries automatically."
+                echo "See the check step for the HTTP status or timeout. Authentication and parsing errors still fail the job."
+              } >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *) exit "$status" ;;
+          esac
 
       - name: Persist state
-        if: ${{ !inputs.check_only }}
+        if: ${{ !inputs.check_only && steps.campus.outputs.status == 'checked' }}
         run: |
           # cookies.lwp is gitignored - only the snapshot and the Telegram
           # offset are committed.

@@ -27,7 +27,7 @@ import httpx
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from kit_campus_mcp.client import KitCampusClient
-from kit_campus_mcp.auth import KitError
+from kit_campus_mcp.auth import KitError, KitTemporaryError
 from kit_campus_mcp.config import load_settings
 from kit_campus_mcp.watch import (
     EXAM_KEY,
@@ -381,6 +381,9 @@ if __name__ == "__main__":
         sys.exit(asyncio.run(main()))
     except KeyboardInterrupt:
         sys.exit(130)
+    except KitTemporaryError as exc:
+        print(f"KIT check deferred: {exc}", file=sys.stderr)
+        sys.exit(75)  # EX_TEMPFAIL: no successful poll, retry next schedule.
     except KitError as exc:
         print(f"KIT check failed: {exc}", file=sys.stderr)
         sys.exit(1)

@@ -27,7 +27,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import quote, urljoin, urlparse
+from urllib.parse import parse_qsl, quote, urlencode, urljoin, urlparse
 
 import httpx
 from bs4 import BeautifulSoup
@@ -71,8 +71,22 @@ def safe_url(url: str) -> str:
     return f"{parsed.scheme}://{parsed.hostname or ''}{parsed.path}"
 
 
+def page_url(url: str) -> str:
+    """Keep useful page selectors in result links, but remove authentication."""
+    parsed = urlparse(str(url))
+    query = [(key, value) for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+             if key.casefold() not in {"login-token", "login-ts", "token", "samlresponse", "samlrequest"}]
+    return parsed._replace(
+        netloc=parsed.netloc.rsplit("@", 1)[-1], query=urlencode(query), fragment="",
+    ).geturl()
+
+
 class KitRequestError(KitError):
     """A request failed, with a diagnostic that contains no credentials."""
+
+
+class KitTemporaryError(KitRequestError):
+    """KIT is temporarily unavailable; a scheduled poll can be deferred."""
 
 
 def _retry_delay(response: httpx.Response | None, attempt: int) -> float:
@@ -291,7 +305,7 @@ class KitSession:
                         f"{method} {safe_url(response.url)} failed ({reason})."
                     ) from None
             if attempt == attempts:
-                raise KitRequestError(
+                raise KitTemporaryError(
                     f"{method} {safe_url(url)} failed after {attempts} "
                     f"attempt(s) ({reason}). No result data was read."
                 ) from None
@@ -360,7 +374,7 @@ class KitSession:
         token = await self.token()
         html, final = await self.walk_sso(*await self.get(_with_token(url, token)))
         if not _needs_login(html, final):
-            return html, safe_url(final)
+            return html, page_url(final)
         # Token expired mid-flight, or the app session was dropped: get a fresh
         # one (logging in again if even that fails) and retry once.
         token = await self.token(force=True)
@@ -370,7 +384,7 @@ class KitSession:
                 f"Still not authenticated after refreshing the token (landed on "
                 f"{safe_url(final)}). The account may not have access to this page."
             )
-        return html, safe_url(final)
+        return html, page_url(final)
 
     async def login(self) -> str:
         """Run the full Shibboleth login. Returns the URL that was landed on."""

@@ -11,7 +11,7 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from kit_campus_mcp.auth import KitError, KitRequestError, KitSession, safe_url
+from kit_campus_mcp.auth import KitError, KitRequestError, KitSession, KitTemporaryError, page_url, safe_url
 from kit_campus_mcp.client import KitCampusClient, _url
 from kit_campus_mcp.config import CAMPUS_BASE, SERVICES, Settings
 
@@ -78,7 +78,7 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
             calls.append(request)
             return httpx.Response(503, text="SECRET")
         self.transport(handler)
-        with self.assertRaisesRegex(KitRequestError, "after 3 attempt") as caught:
+        with self.assertRaisesRegex(KitTemporaryError, "after 3 attempt") as caught:
             await self.session.get(SENSITIVE_URL)
         self.assertEqual(len(calls), 3)
         self.assertNotIn("SECRET", str(caught.exception))
@@ -93,8 +93,9 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
                     return httpx.Response(status, text="error page")
                 await self.session._client.aclose()
                 self.transport(handler)
-                with self.assertRaisesRegex(KitRequestError, f"HTTP {status}"):
+                with self.assertRaisesRegex(KitRequestError, f"HTTP {status}") as caught:
                     await self.session.get(SENSITIVE_URL)
+                self.assertNotIsInstance(caught.exception, KitTemporaryError)
                 self.assertEqual(len(calls), 1)
 
     async def test_post_is_not_replayed(self):
@@ -150,6 +151,20 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
 
 
 class WorkflowTests(unittest.IsolatedAsyncioTestCase):
+    async def test_persistent_timeout_is_temporary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            settings = Settings(None, None, Path(directory), 1, "de", None)
+            async with KitSession(settings) as session:
+                await session._client.aclose()
+                def handler(request):
+                    raise httpx.ReadTimeout("SECRET", request=request)
+                session._client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+                with patch("kit_campus_mcp.auth.asyncio.sleep", new_callable=AsyncMock), \
+                     self.assertRaises(KitTemporaryError) as caught:
+                    await session.get(SENSITIVE_URL)
+                self.assertIn("ReadTimeout", str(caught.exception))
+                self.assertNotIn("SECRET", str(caught.exception))
+
     async def test_check_only_does_not_touch_telegram_or_snapshots(self):
         from examples import telegram_bot as bot
         with tempfile.TemporaryDirectory() as directory:
@@ -195,6 +210,10 @@ class EndpointTests(unittest.TestCase):
     def test_diagnostic_url_drops_credentials_and_fragments(self):
         self.assertEqual(safe_url("https://user:password@host/path?token=SECRET#SECRET"),
                          "https://host/path")
+
+    def test_result_links_keep_page_selectors(self):
+        self.assertEqual(page_url("https://host/path?gguid=example&login-token=SECRET&login-ts=1"),
+                         "https://host/path?gguid=example")
 
 
 if __name__ == "__main__":

@@ -169,9 +169,17 @@ messages, answering commands, or changing the result snapshots.
 Temporary GET failures (timeouts, connection errors, HTTP 408/429/500/502/503/504)
 are retried up to three attempts with bounded delays. Login and SAML POSTs are
 not replayed. A missing study tree triggers one token refresh and reread. If KIT
-still does not return valid results, the job stays failed and preserves the last
-snapshot rather than reporting an empty list as a successful check. Diagnostics
-omit login tokens and response bodies.
+still does not return a study tree, the job fails and preserves the last snapshot
+rather than treating an empty list as a successful check. Diagnostics omit login
+tokens and response bodies.
+
+When a temporary outage persists after the retries, the CLI exits with code 75
+and the scheduled workflow records **DEFERRED** in its warning and run summary.
+It skips the state commit and tries again on the next schedule. GitHub marks the
+workflow itself successful because the outage was handled, but **no successful
+results check is claimed**. This avoids repeated failure emails during a KIT
+outage. Invalid credentials, access errors (401/403), missing endpoints, parser
+changes, and Telegram delivery failures still fail visibly.
 
 Run the offline regression checks with `python -m unittest discover -s tests -v`.
 
