@@ -1,5 +1,9 @@
 # kit-campus-mcp
 
+<!-- project-navigation -->
+[Getting started](#install) · [Features](#tools)
+<!-- /project-navigation -->
+
 An MCP server for the KIT Campus portal (`campus.studium.kit.edu`). It reads
 exam results, exam registrations, study progress, your timetable and the public
 module catalogue, and it can report which results are **new since the last
@@ -37,7 +41,10 @@ repeated polls do not re-run the SSO chain.
 ## Install
 
 ```bash
-cd C:\Users\blade\kit-campus-mcp && uv venv && uv pip install -e .
+git clone https://github.com/OutBlade/kit-campus-mcp.git
+cd kit-campus-mcp
+uv venv
+uv pip install -e .
 ```
 
 Copy `.env.example` to `.env` and fill in your KIT account:
