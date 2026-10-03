@@ -195,6 +195,10 @@ the last one, so a `/noten` is replied to within the hour rather than instantly.
 For instant replies, run the bot locally (or on any always-on host) without
 `--once`.
 
+If KIT is temporarily unavailable, `/noten` replies with the last saved grade
+snapshot and its check time, clearly marked as not live. The scheduled poll still
+defers and keeps the saved snapshot unchanged until KIT is available again.
+
 Two things worth knowing about GitHub's cron: scheduled runs are queued and can
 drift by 5-15 minutes, and a repository with no activity for 60 days has its
 schedules disabled. The state commit after each run counts as activity, so that

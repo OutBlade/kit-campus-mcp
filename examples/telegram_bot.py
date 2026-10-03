@@ -20,6 +20,7 @@ import asyncio
 import json
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -186,7 +187,13 @@ async def handle_command(text: str) -> str:
 
     async with KitCampusClient() as client:
         if command in {"noten", "grades"}:
-            data = await client.get_grades()
+            try:
+                data = await client.get_grades()
+            except KitTemporaryError:
+                cached = _cached_grades_reply()
+                if cached is not None:
+                    return cached
+                raise
             lines = [
                 (
                     f"{data['passed']}/{data['count']} bestanden, "
@@ -240,6 +247,39 @@ async def handle_command(text: str) -> str:
             return "\n".join(lines)
 
     return f"Unbekannter Befehl: {command}\n\n{HELP}"
+
+
+def _cached_grades_reply() -> str | None:
+    """Return clearly dated last-known grades while KIT is temporarily down."""
+    settings = load_settings()
+    store = SnapshotStore(settings.snapshot_file)
+    results = store.get("grades")
+    checked_at = store.last_checked("grades")
+    if results is None or checked_at is None:
+        return None
+
+    try:
+        checked = datetime.fromisoformat(checked_at.replace("Z", "+00:00"))
+        timestamp = checked.astimezone(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")
+    except (ValueError, OverflowError):
+        timestamp = checked_at
+
+    lines = [
+        (
+            "KIT ist gerade nicht erreichbar. Das ist der letzte gespeicherte Stand, "
+            "nicht live geprüft."
+        ),
+        f"Stand: {timestamp}",
+        "",
+    ]
+    for result in results:
+        mark = {"passed": "+", "failed": "-", "open": "?"}.get(
+            result.get("outcome"), " "
+        )
+        grade = result.get("grade_raw") or result.get("grade") or "--"
+        title = result.get("title") or result.get("code") or "Prüfung"
+        lines.append(f"{mark} {grade:>4}  {title}")
+    return "\n".join(lines)
 
 
 async def drain_commands(bot: Telegram) -> int:
