@@ -253,8 +253,15 @@ async def drain_commands(bot: Telegram) -> int:
     try:
         updates = await bot.updates(offset, timeout=0)
     except httpx.HTTPError as exc:
-        print(f"Could not read Telegram updates: {exc}")
-        return 0
+        # HTTP errors include the request URL, which contains the bot token.
+        # Fail the workflow with a sanitized diagnostic instead of reporting
+        # a green run that silently ignored chat commands.
+        status = (
+            f"HTTP {exc.response.status_code}"
+            if isinstance(exc, httpx.HTTPStatusError)
+            else type(exc).__name__
+        )
+        raise RuntimeError(f"Could not read Telegram updates ({status}).") from None
     for update in updates:
         offset = update["update_id"] + 1
         message = update.get("message") or {}
@@ -355,15 +362,18 @@ async def main() -> int:
                 return 0
 
         if args.once:
+            # Answer commands before the scheduled background poll. A temporary
+            # KIT outage must not prevent /noten or /status from being handled.
+            answered = 0
+            if not args.no_commands:
+                answered = await drain_commands(bot)
+                print(f"Answered {answered} pending command(s).")
             messages = await poll_kit()
             if messages:
                 await bot.send("\n".join(messages))
                 print(f"Sent {len(messages)} notification lines.")
             else:
                 print("No changes.")
-            if not args.no_commands:
-                answered = await drain_commands(bot)
-                print(f"Answered {answered} pending command(s).")
             return 0
 
         print(f"Watching KIT every {args.interval}s. Ctrl+C to stop.")

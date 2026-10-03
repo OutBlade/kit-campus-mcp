@@ -97,3 +97,18 @@ jobs:
           else
             echo "No state change."
           fi
+
+      - name: Persist Telegram command offset after deferred KIT poll
+        if: ${{ !inputs.check_only && steps.campus.outputs.status == 'deferred' }}
+        run: |
+          # Keep the Telegram queue acknowledgement even when KIT is down;
+          # never update the grade or exam snapshots on a deferred poll.
+          if [ -n "$(git status --porcelain state/telegram.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add state/telegram.json
+            git commit -m "State: Telegram command offset $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push
+          else
+            echo "No Telegram command offset change."
+          fi
