@@ -267,8 +267,12 @@ async def drain_commands(bot: Telegram) -> int:
         message = update.get("message") or {}
         text = message.get("text")
         chat_id = str((message.get("chat") or {}).get("id", ""))
-        # Only configured chats may query; /noten shows your grades.
-        if not text or not text.startswith("/") or chat_id not in bot.recipients:
+        if not text or not text.startswith("/"):
+            continue
+        # Only configured chats may query; /noten shows your grades. Report a
+        # mismatch without printing the incoming or configured chat IDs.
+        if chat_id not in bot.recipients:
+            print("Ignoring Telegram command from an unconfigured chat; check TELEGRAM_CHAT_ID.")
             continue
         try:
             reply = await handle_command(text)
