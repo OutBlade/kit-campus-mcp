@@ -1,5 +1,6 @@
 """Read-only comparison with the portal's current iframe request."""
 import asyncio
+import re
 from urllib.parse import urlencode, urlparse
 
 from kit_campus_mcp.client import KitCampusClient
@@ -34,6 +35,13 @@ async def main():
                 text = BeautifulSoup(response.text, 'html.parser').get_text(' ', strip=True).lower()
                 indicators = [word for word in ('service unavailable', 'maintenance', 'wartung', 'database', 'sql', 'iis', 'runtime error', 'temporarily', 'overloaded') if word in text]
                 print(f'{name}: bytes={len(response.content)}; indicators={indicators}', flush=True)
+                if response.status_code == 503:
+                    for secret in (token.token_a, token.token_b, token.username, token.firstname, token.lastname, token.matriculation_number, guid, term, client.settings.password):
+                        if secret:
+                            text = text.replace(str(secret).lower(), '<redacted>')
+                    text = re.sub(r'https?://\S+', '<url>', text)
+                    text = re.sub(r'[a-z0-9+/=_%-]{20,}', '<redacted>', text)
+                    print(f'{name}: error_text={text[:500]}', flush=True)
             except Exception as exc:
                 print(f'{name}: {type(exc).__name__}', flush=True)
 
