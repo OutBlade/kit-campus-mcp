@@ -13,6 +13,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install --quiet -e .
+      - run: pip install --quiet playwright && python -m playwright install --with-deps chromium
       - run: python examples/diagnose_campus.py
         env:
           KIT_USERNAME: ${{ secrets.KIT_USERNAME }}

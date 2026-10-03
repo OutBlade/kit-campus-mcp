@@ -8,6 +8,7 @@ from kit_campus_mcp.auth import _with_token
 from kit_campus_mcp.config import CAMPUS_BASE, PORTAL_BASE
 from kit_campus_mcp.parsers import parse_study_tree
 from bs4 import BeautifulSoup
+from playwright.async_api import async_playwright
 
 
 async def main():
@@ -44,6 +45,28 @@ async def main():
                     print(f'{name}: error_text={text[:500]}', flush=True)
             except Exception as exc:
                 print(f'{name}: {type(exc).__name__}', flush=True)
+        async with async_playwright() as p:
+            browser = await p.chromium.launch()
+            context = await browser.new_context(locale='de-DE')
+            cookies = []
+            for c in client.session._client.cookies.jar:
+                entry = {'name': c.name, 'value': c.value, 'domain': c.domain, 'path': c.path or '/', 'secure': c.secure}
+                if c.expires and c.expires > 0:
+                    entry['expires'] = c.expires
+                cookies.append(entry)
+            await context.add_cookies(cookies)
+            page = await context.new_page()
+            try:
+                await page.goto(variants['direct-selectors'], wait_until='domcontentloaded', timeout=60000)
+                try:
+                    await page.wait_for_function("!document.body.innerText.toLowerCase().includes('verifying your browser')", timeout=45000)
+                except Exception:
+                    pass
+                html = await page.content()
+                print(f"browser: tree_rows={len(parse_study_tree(html))}; challenge={'verifying your browser' in html.lower()}; final_path={urlparse(page.url).path}", flush=True)
+            except Exception as exc:
+                print(f'browser: {type(exc).__name__}', flush=True)
+            await browser.close()
 
 
 asyncio.run(main())
