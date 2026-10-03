@@ -4,7 +4,7 @@ import re
 from urllib.parse import urlencode, urlparse
 
 from kit_campus_mcp.client import KitCampusClient
-from kit_campus_mcp.auth import _with_token
+from kit_campus_mcp.auth import _with_token, _needs_login
 from kit_campus_mcp.config import CAMPUS_BASE, PORTAL_BASE
 from kit_campus_mcp.parsers import parse_study_tree
 from bs4 import BeautifulSoup
@@ -62,8 +62,19 @@ async def main():
                     await page.wait_for_function("!document.body.innerText.toLowerCase().includes('verifying your browser')", timeout=45000)
                 except Exception:
                     pass
+                await page.wait_for_timeout(3000)
                 html = await page.content()
                 print(f"browser: tree_rows={len(parse_study_tree(html))}; challenge={'verifying your browser' in html.lower()}; final_path={urlparse(page.url).path}", flush=True)
+                soup = BeautifulSoup(html, 'html.parser')
+                print(f"browser: needs_login={_needs_login(html, page.url)}; tables={[t.get('id') for t in soup.find_all('table')][:10]}; row_classes={sorted({c for r in soup.find_all('tr') for c in r.get('class', [])})[:20]}", flush=True)
+                text = soup.get_text(' ', strip=True).lower()
+                for secret in (token.token_a, token.token_b, token.username, token.firstname, token.lastname, token.matriculation_number, guid, term, client.settings.password):
+                    if secret:
+                        text = text.replace(str(secret).lower(), '<redacted>')
+                text = re.sub(r'https?://\S+', '<url>', text)
+                text = re.sub(r'[a-z0-9+/=_%-]{20,}', '<redacted>', text)
+                if not parse_study_tree(html):
+                    print(f'browser: diagnostic_text={text[:500]}', flush=True)
             except Exception as exc:
                 print(f'browser: {type(exc).__name__}', flush=True)
             await browser.close()
