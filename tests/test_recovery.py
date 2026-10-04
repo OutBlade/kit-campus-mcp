@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from kit_campus_mcp.auth import KitError, KitRequestError, KitSession, KitTemporaryError, page_url, safe_url
 from kit_campus_mcp.client import KitCampusClient, _url
 from kit_campus_mcp.config import CAMPUS_BASE, SERVICES, Settings
+from kit_campus_mcp.parsers import parse_grade, parse_study_tree
 
 
 TREE = """<table id="specific-contract-tree">
@@ -26,6 +27,19 @@ SENSITIVE_URL = "https://cascampus.studium.kit.edu/campus/student/contractview.a
 
 
 class RecoveryTests(unittest.IsolatedAsyncioTestCase):
+    def test_parenthesized_provisional_grades_count_as_passed(self):
+        self.assertEqual(parse_grade("(3,0)"), 3.0)
+        self.assertEqual(parse_grade("(4,0)"), 4.0)
+        self.assertEqual(parse_grade("(5,0)"), 5.0)
+        html = """<table id="specific-contract-tree">
+        <tr class="brick hierarchy2"><td></td><td>T-TEST-100 - Provisional</td>
+        <td>Exam</td><td>incomplete</td><td>(3,0)</td><td></td><td>0</td><td>6</td></tr>
+        </table>"""
+        [result] = parse_study_tree(html)
+        self.assertEqual(result.grade, 3.0)
+        self.assertTrue(result.has_result)
+        self.assertEqual(result.outcome, "passed")
+
     async def asyncSetUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.settings = Settings(None, None, Path(self.temp.name), 1, "de", "test-program")

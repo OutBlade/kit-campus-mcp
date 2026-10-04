@@ -417,8 +417,12 @@ def parse_credits(value: str) -> float | None:
 
 
 def parse_grade(value: str) -> float | None:
-    """Parse a German grade ("1,7"). Returns None for non-numeric entries."""
+    """Parse a German grade ("1,7" or provisional "(3,0)")."""
     text = clean_text(value).replace(",", ".")
+    # KIT sometimes wraps a numeric grade in parentheses while the result is
+    # provisional/incomplete. The grade still determines whether it is passed.
+    if text.startswith("(") and text.endswith(")"):
+        text = text[1:-1].strip()
     match = re.fullmatch(r"\d(?:\.\d)?", text)
     return float(match.group(0)) if match else None
 
