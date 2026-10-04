@@ -64,6 +64,10 @@ async def main():
                     pass
                 await page.wait_for_timeout(3000)
                 html = await page.content()
+                if not parse_study_tree(html):
+                    await page.goto(variants['portal-selectors'], wait_until='domcontentloaded', timeout=60000)
+                    await page.wait_for_timeout(5000)
+                    html = await page.content()
                 print(f"browser: tree_rows={len(parse_study_tree(html))}; challenge={'verifying your browser' in html.lower()}; final_path={urlparse(page.url).path}", flush=True)
                 soup = BeautifulSoup(html, 'html.parser')
                 print(f"browser: needs_login={_needs_login(html, page.url)}; tables={[t.get('id') for t in soup.find_all('table')][:10]}; row_classes={sorted({c for r in soup.find_all('tr') for c in r.get('class', [])})[:20]}", flush=True)
