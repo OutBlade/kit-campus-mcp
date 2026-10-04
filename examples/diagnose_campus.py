@@ -45,6 +45,27 @@ async def main():
                         seen.add(text)
                         print("Review metadata:", text[:1500], flush=True)
                 if not seen: print("No exam review announcement in exam details.", flush=True)
+        reader = client.session._browser
+        if reader is not None:
+            page = await reader._context.new_page()
+            await page.goto("https://ilias.studium.kit.edu/login.php?target=crs_2918330&client_id=produktiv&cmd=force_login&lang=de", wait_until="domcontentloaded")
+            button = page.locator("#button_shib_login")
+            if await button.count():
+                await button.click()
+                await page.wait_for_load_state("domcontentloaded")
+            await asyncio.sleep(3)
+            await page.goto("https://ilias.studium.kit.edu/goto_produktiv_crs_2918330.html", wait_until="domcontentloaded")
+            await asyncio.sleep(2)
+            course = BeautifulSoup(await page.content(), "html.parser")
+            print("ILIAS course access:", "Abmelden" in course.get_text() or "Logout" in course.get_text(), flush=True)
+            seen = set()
+            for item in course.find_all(string=re.compile("einsicht", re.I)):
+                parent = item.find_parent(["p", "li", "div"])
+                text = clean_text(parent.get_text(" ", strip=True) if parent else str(item))
+                if text not in seen:
+                    seen.add(text)
+                    print("ILIAS review metadata:", text[:1500], flush=True)
+            if not seen: print("No inspection notice visible in ILIAS course overview.", flush=True)
         print("Diagnostics complete; no Telegram messages or state writes.", flush=True)
 
 asyncio.run(main())
