@@ -31,8 +31,20 @@ async def main():
                     onclick = link.get("onclick", "")
                     functions = re.findall(r"([a-zA-Z_][\w]*)\s*\(", onclick)
                     print(f"Cell {idx} link path={parsed.path[:100]} query_keys={[k for k,v in parse_qsl(parsed.query)]} functions={functions}", flush=True)
-            for text in row.stripped_strings:
-                if "einsicht" in text.lower(): print("Review metadata:", clean_text(text)[:700], flush=True)
+            grade_link = cells[4].find("a", href=True)
+            if grade_link:
+                exam_url = urljoin(final, grade_link["href"])
+                exam_html, exam_final = await client.session.fetch_authenticated(exam_url)
+                exam = BeautifulSoup(exam_html, "html.parser")
+                print("Exam details loaded.", flush=True)
+                seen = set()
+                for item in exam.find_all(string=re.compile("einsicht|notenvorbehalt", re.I)):
+                    parent = item.find_parent(["tr", "p", "li", "div"])
+                    text = clean_text(parent.get_text(" ", strip=True) if parent else str(item))
+                    if text not in seen:
+                        seen.add(text)
+                        print("Review metadata:", text[:1500], flush=True)
+                if not seen: print("No exam review announcement in exam details.", flush=True)
         print("Diagnostics complete; no Telegram messages or state writes.", flush=True)
 
 asyncio.run(main())
