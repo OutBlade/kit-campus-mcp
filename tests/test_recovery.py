@@ -40,6 +40,26 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.has_result)
         self.assertEqual(result.outcome, "passed")
 
+    async def test_passed_provisional_credits_are_included_in_total(self):
+        html = """<table id="specific-contract-tree">
+        <tr class="product hierarchy1"><td></td><td>Example degree</td><td></td><td></td>
+        <td></td><td></td><td>35</td><td>180</td></tr>
+        <tr class="brick hierarchy2"><td></td><td>T-TEST-100 - Provisional</td>
+        <td>Exam</td><td>incomplete</td><td>(3,0)</td><td></td><td>0</td><td>8</td></tr>
+        </table>"""
+        nodes = parse_study_tree(html)
+        client = KitCampusClient(self.settings)
+        client._study_tree = AsyncMock(return_value=(nodes, "guid", "url"))
+        try:
+            data = await client.get_grades()
+        finally:
+            await client.close()
+        self.assertEqual(data["passed"], 1)
+        self.assertEqual(data["credits_official"], 35.0)
+        self.assertEqual(data["credits_provisional"], 8.0)
+        self.assertEqual(data["credits_earned"], 43.0)
+        self.assertEqual(data["results"][0]["credits_counted"], 8.0)
+
     async def asyncSetUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.settings = Settings(None, None, Path(self.temp.name), 1, "de", "test-program")
@@ -186,6 +206,23 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(KitTemporaryError):
             await self.session.post(SENSITIVE_URL, {'password': 'SECRET'})
         self.session._browser_get.assert_not_awaited()
+
+    async def test_transient_saml_error_restarts_with_a_fresh_login_flow(self):
+        self.session.settings = Settings("ab1234", "test-password", Path(self.temp.name), 1, "de", None)
+        self.session.get = AsyncMock(return_value=("login page", "https://campus.kit.edu/login"))
+        self.session.walk_sso = AsyncMock(side_effect=[
+            KitTemporaryError(
+                "POST https://idp.scc.kit.edu/Shibboleth.sso/SAML2/POST "
+                "failed after 1 attempt(s) (HTTP 500). No result data was read."
+            ),
+            ("student page", "https://campus.kit.edu/student"),
+        ])
+        with patch.object(self.session, "save_cookies"):
+            result = await self.session.login()
+        self.assertEqual(result, "https://campus.kit.edu/student")
+        self.assertEqual(self.session.get.await_count, 2)
+        self.assertEqual(self.session.walk_sso.await_count, 2)
+        self.mock_sleep.assert_awaited_once_with(2)
 
     async def test_browser_failure_hides_sensitive_error_details(self):
         self.session._browser = AsyncMock()

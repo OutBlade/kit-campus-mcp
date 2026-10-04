@@ -444,16 +444,20 @@ async def kit_get_grades(params: ProgramInput) -> str:
 
     Returns:
         str: {"program_guid": str, "program": str, "count": int, "passed": int,
-              "credits_earned": float, "credits_required": float,
+              "credits_earned": float, "credits_official": float,
+              "credits_provisional": float, "credits_required": float,
               "average": float|null,
               "results": [{"code": str, "title": str,
                            "grade": float|null, "grade_raw": str,
                            "outcome": "passed"|"failed"|"open",
-                           "credits": float|null, "credits_required": float|null,
+                           "credits": float|null, "credits_counted": float,
+                           "credits_provisional": float, "credits_required": float|null,
                            "date": str, "attempt": str, "kind": str}]}
         `grade_raw` is "be" for a passed ungraded Teilleistung, otherwise the
-        German grade ("2,7"). `average` and the credit totals are the official
-        figures the portal computes, not a re-derivation.
+        German grade ("2,7"). `credits_official` is the portal total;
+        `credits_earned` also includes missing required credits for provisional
+        passing grades shown in parentheses. Per-result `credits` is the portal
+        value, while `credits_counted` includes that provisional amount.
 
     Error Handling:
         Returns "Login failed. ..." when credentials are missing or rejected,
@@ -478,6 +482,8 @@ async def kit_get_grades(params: ProgramInput) -> str:
         "",
         f"**Passed**: {data['passed']} of {data['count']} recorded  ",
         f"**Credits**: {data['credits_earned']} of {data['credits_required']} ECTS  ",
+        (f"**Provisional**: {data['credits_provisional']} ECTS included  "
+         if data["credits_provisional"] else ""),
         f"**Average**: {data['average'] if data['average'] is not None else 'n/a'}",
         "",
     ]
@@ -487,7 +493,7 @@ async def kit_get_grades(params: ProgramInput) -> str:
             ("code", "ID"),
             ("title", "Teilleistung"),
             ("grade_raw", "Grade"),
-            ("credits", "ECTS"),
+            ("credits_counted", "ECTS counted"),
             ("date", "Date"),
             ("outcome", "Result"),
         ],
@@ -569,6 +575,8 @@ async def kit_check_new_results(params: CheckNewResultsInput) -> str:
             "totals": {
                 "passed": grades["passed"],
                 "credits_earned": grades["credits_earned"],
+                "credits_official": grades["credits_official"],
+                "credits_provisional": grades["credits_provisional"],
                 "average": grades["average"],
             },
             "exams": None,

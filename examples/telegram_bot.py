@@ -158,7 +158,7 @@ async def poll_kit() -> list[str]:
             if result["changes"]:
                 messages.append(
                     f"\nGesamt: {grades['passed']}/{grades['count']} bestanden, "
-                    f"{grades['credits_earned']} LP, Schnitt {grades['average']}"
+                    f"{_credits_summary(grades)}, Schnitt {grades['average']}"
                 )
         try:
             exams = await client.list_registered_exams()
@@ -197,7 +197,7 @@ async def handle_command(text: str) -> str:
             lines = [
                 (
                     f"{data['passed']}/{data['count']} bestanden, "
-                    f"{data['credits_earned']} LP, Schnitt {data['average']}"
+                    f"{_credits_summary(data)}, Schnitt {data['average']}"
                 ),
                 "",
             ]
@@ -226,7 +226,7 @@ async def handle_command(text: str) -> str:
                 f"Login ok.\n"
                 f"Studiengang: {programs[0]['title']}\n"
                 f"{data['passed']}/{data['count']} bestanden, "
-                f"{data['credits_earned']} LP, Schnitt {data['average']}"
+                f"{_credits_summary(data)}, Schnitt {data['average']}"
             )
 
         if command in {"modul", "module"}:
@@ -272,6 +272,25 @@ def _cached_grades_reply() -> str | None:
         f"Stand: {timestamp}",
         "",
     ]
+    passed = sum(result.get("outcome") == "passed" for result in results)
+    credits = sum(
+        float(result.get("credits") or 0)
+        for result in results if result.get("outcome") == "passed"
+    )
+    provisional = 0.0
+    for result in results:
+        raw_grade = str(result.get("grade_raw") or "").strip()
+        if result.get("outcome") == "passed" and raw_grade.startswith("(") and raw_grade.endswith(")"):
+            missing = max(
+                float(result.get("credits_required") or 0) - float(result.get("credits") or 0),
+                0.0,
+            )
+            credits += missing
+            provisional += missing
+    summary = f"{passed}/{len(results)} bestanden, {credits:g} LP"
+    if provisional:
+        summary += f" (davon {provisional:g} vorläufig)"
+    lines.extend([summary, ""])
     for result in results:
         mark = {"passed": "+", "failed": "-", "open": "?"}.get(
             result.get("outcome"), " "
@@ -280,6 +299,14 @@ def _cached_grades_reply() -> str | None:
         title = result.get("title") or result.get("code") or "Prüfung"
         lines.append(f"{mark} {grade:>4}  {title}")
     return "\n".join(lines)
+
+
+def _credits_summary(data: dict[str, Any]) -> str:
+    credits = f"{data['credits_earned']} LP"
+    provisional = data.get("credits_provisional") or 0
+    if provisional:
+        credits += f" (davon {provisional:g} vorläufig)"
+    return credits
 
 
 async def drain_commands(bot: Telegram) -> int:

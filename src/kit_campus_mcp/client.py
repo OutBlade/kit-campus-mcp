@@ -395,13 +395,33 @@ class KitCampusClient:
             results.append(node.as_result())
         passed = [r for r in results if r["outcome"] == "passed"]
         root = next((n for n in nodes if n.kind == "product"), None)
+        # CAS can show a provisional passing grade in parentheses before it
+        # updates the row's earned LP. Count the still-missing required LP for
+        # those rows, while retaining the portal's official total separately.
+        provisional_credits = 0.0
+        for result in passed:
+            raw_grade = str(result.get("grade_raw") or "").strip()
+            if not (raw_grade.startswith("(") and raw_grade.endswith(")")):
+                continue
+            required = float(result.get("credits_required") or 0)
+            earned = float(result.get("credits") or 0)
+            result["credits_provisional"] = max(required - earned, 0.0)
+            provisional_credits += result["credits_provisional"]
+            result["credits_counted"] = earned + result["credits_provisional"]
+        for result in results:
+            result.setdefault("credits_provisional", 0.0)
+            result.setdefault("credits_counted", result.get("credits") or 0.0)
+        official_credits = root.credits_earned if root else None
         return {
             "program_guid": guid,
             "program": root.title if root else "",
             "url": final,
             "count": len(results),
             "passed": len(passed),
-            "credits_earned": root.credits_earned if root else None,
+            "credits_earned": (official_credits + provisional_credits
+                               if official_credits is not None else None),
+            "credits_official": official_credits,
+            "credits_provisional": provisional_credits,
             "credits_required": root.credits_required if root else None,
             "average": root.grade if root else None,
             "results": results,

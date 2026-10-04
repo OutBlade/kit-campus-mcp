@@ -24,6 +24,7 @@ import asyncio
 import http.cookiejar
 import json
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -429,7 +430,17 @@ class KitSession:
                 "(your KIT account, e.g. ab1234) in the environment or in a .env file."
             )
 
-        html, url = await self.walk_sso(*await self.get(LOGIN_ENTRY))
+        for attempt in range(2):
+            try:
+                # A retry starts a brand-new SSO round-trip, producing a fresh
+                # SAML response. Never replay the failed POST body/assertion.
+                html, url = await self.walk_sso(*await self.get(LOGIN_ENTRY))
+                break
+            except KitTemporaryError as exc:
+                if attempt or not _transient_saml_post_failure(str(exc)):
+                    raise
+                logger.warning("KIT returned a transient error during SAML login; restarting once.")
+                await asyncio.sleep(2)
         self.save_cookies()
         self._logged_in = True
         return url
@@ -519,6 +530,16 @@ def _needs_login(html: str, url: str) -> bool:
     if "/campus/login/login.asp" in url or "sessiontimeout" in url.lower():
         return True
     return any(marker in lowered for marker in SESSION_EXPIRED_MARKERS)
+
+
+def _transient_saml_post_failure(message: str) -> bool:
+    """Allow one fresh login attempt after a transient SAML endpoint response."""
+    return bool(re.search(
+        r"POST https?://[^\s]+/Shibboleth\.sso/SAML2/POST failed after 1 attempt\(s\) "
+        r"\(HTTP 50[0234]\)",
+        message,
+        re.IGNORECASE,
+    ))
 
 
 def _unknown_step_message(html: str, url: str, forms: list[HtmlForm]) -> str:
