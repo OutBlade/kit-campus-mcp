@@ -21,7 +21,7 @@ GRADE_KEY = ("code", "title", "attempt")
 EXAM_KEY = ("code", "title")
 
 # Fields whose change is worth a notification.
-GRADE_WATCHED = ("grade_raw", "status", "outcome", "credits")
+GRADE_WATCHED = ("grade_raw", "status", "outcome", "credits", "inspection_notice")
 EXAM_WATCHED = ("status", "dates", "date", "room")
 
 
@@ -181,7 +181,21 @@ def format_grade_change(change: dict[str, Any], language: str = "de") -> str:
     # for passed/failed it just repeats the headline in the portal's wording.
     if status and outcome == "open":
         parts.append(status)
-    return " - ".join(str(p) for p in parts)
+    message = " - ".join(str(p) for p in parts)
+    inspection = format_inspection(entry)
+    if inspection:
+        message += "\n" + inspection
+    return message
+
+
+def format_inspection(entry: dict[str, Any]) -> str | None:
+    if not str(entry.get("grade_raw") or "").strip().startswith("("):
+        return None
+    if entry.get("inspection_notice"):
+        return "Einsicht: " + str(entry["inspection_notice"])
+    if entry.get("inspection_unavailable"):
+        return "Einsicht: Termin und Ort konnten gerade nicht geladen werden."
+    return "Einsicht: Termin und Ort im Campus-Eintrag nicht angegeben."
 
 
 def summarise(changes: list[dict[str, Any]], formatter: Callable[[dict], str]) -> str:

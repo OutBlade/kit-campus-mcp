@@ -287,6 +287,7 @@ class TreeNode:
     credits_earned: float | None
     credits_required: float | None
     guid: str | None = None
+    exam_url: str | None = None
 
     @property
     def grade(self) -> float | None:
@@ -328,6 +329,7 @@ class TreeNode:
             "date": self.date,
             "kind": self.art,
             "guid": self.guid,
+            "exam_url": self.exam_url,
         }
 
     def as_dict(self) -> dict[str, object]:
@@ -355,7 +357,7 @@ def _split_grade_cell(text: str) -> tuple[str, str]:
     return cleaned, ""
 
 
-def parse_study_tree(html: str) -> list[TreeNode]:
+def parse_study_tree(html: str, base_url: str = "") -> list[TreeNode]:
     """Parse the `specific-contract-tree` table on contractview.asp."""
     soup = BeautifulSoup(html, "html.parser")
     table = soup.find("table", id="specific-contract-tree")
@@ -373,11 +375,13 @@ def parse_study_tree(html: str) -> list[TreeNode]:
         level = next(
             (int(c[len("hierarchy"):]) for c in classes if c.startswith("hierarchy")), 0
         )
-        cells = [_cell_text(c) for c in row.find_all(["td", "th"])]
+        cell_tags = row.find_all(["td", "th"])
+        cells = [_cell_text(c) for c in cell_tags]
         # Columns: icon, Titel (mit Kennung), Art, Status, Note, Datum, Ist-LP, Soll-LP
         cells += [""] * (8 - len(cells))
         code, title = split_code_title(cells[1])
         grade_raw, attempt = _split_grade_cell(cells[4])
+        exam_link = cell_tags[4].find("a", href=True) if len(cell_tags) > 4 else None
         row_id = row.get("id") or ""
         nodes.append(
             TreeNode(
@@ -393,6 +397,7 @@ def parse_study_tree(html: str) -> list[TreeNode]:
                 credits_earned=parse_credits(cells[6]),
                 credits_required=parse_credits(cells[7]),
                 guid=row_id if row_id.startswith("0x") else None,
+                exam_url=urljoin(base_url, exam_link["href"]) if exam_link else None,
             )
         )
     return nodes
@@ -425,6 +430,26 @@ def parse_grade(value: str) -> float | None:
         text = text[1:-1].strip()
     match = re.fullmatch(r"\d(?:\.\d)?", text)
     return float(match.group(0)) if match else None
+
+
+def parse_exam_inspection(html: str) -> str | None:
+    """Extract the review announcement with its date and room as published."""
+    soup = BeautifulSoup(html, "html.parser")
+    notices: list[str] = []
+    for text in soup.find_all(string=re.compile(r"einsicht|exam inspection", re.I)):
+        if text.parent.name in {"script", "style"}:
+            continue
+        parent = text.find_parent(["tr", "p", "li"])
+        if parent is None:
+            parent = text.parent
+        notice = clean_text(parent.get_text(" ", strip=True))
+        if parent.name == "tr":
+            detail = parent.find_next_sibling("tr")
+            if detail is not None and "collapsible" in detail.get("class", []):
+                notice += " " + clean_text(detail.get_text(" ", strip=True))
+        if notice and notice not in notices:
+            notices.append(notice)
+    return "\n".join(notices) if notices else None
 
 
 def guid_from_url(url: str) -> str | None:

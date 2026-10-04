@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from kit_campus_mcp.auth import KitError, KitRequestError, KitSession, KitTemporaryError, page_url, safe_url
 from kit_campus_mcp.client import KitCampusClient, _url
 from kit_campus_mcp.config import CAMPUS_BASE, SERVICES, Settings
-from kit_campus_mcp.parsers import parse_grade, parse_study_tree
+from kit_campus_mcp.parsers import parse_grade, parse_study_tree, parse_exam_inspection
 
 
 TREE = """<table id="specific-contract-tree">
@@ -27,6 +27,13 @@ SENSITIVE_URL = "https://cascampus.studium.kit.edu/campus/student/contractview.a
 
 
 class RecoveryTests(unittest.IsolatedAsyncioTestCase):
+    def test_inspection_retains_published_time_and_room(self):
+        html = '<table><tr><th>Klausureinsicht</th><td>20.10.2026, 14:00–15:00, Gebäude 20.30, Raum 2.001</td></tr></table>'
+        notice = parse_exam_inspection(html)
+        self.assertIn("20.10.2026", notice)
+        self.assertIn("14:00–15:00", notice)
+        self.assertIn("Raum 2.001", notice)
+        self.assertIsNone(parse_exam_inspection('<p>Klausur: 10.08.2026, Hörsaal 1</p>'))
     def test_parenthesized_provisional_grades_count_as_passed(self):
         self.assertEqual(parse_grade("(3,0)"), 3.0)
         self.assertEqual(parse_grade("(4,0)"), 4.0)
@@ -232,6 +239,15 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
 
 
 class WorkflowTests(unittest.IsolatedAsyncioTestCase):
+    async def test_fresh_health_reply_rejects_cache_fallback(self):
+        from examples import telegram_bot as bot
+        client = AsyncMock()
+        client.get_grades.side_effect = KitTemporaryError("Temporary SSO failure")
+        with patch.object(bot, "_cached_grades_reply", return_value="OLD GRADES") as cached:
+            with self.assertRaises(KitTemporaryError):
+                await bot.handle_command("/noten", allow_cached=False, client=client)
+        cached.assert_not_called()
+
     async def test_persistent_timeout_is_temporary(self):
         with tempfile.TemporaryDirectory() as directory:
             settings = Settings(None, None, Path(directory), 1, "de", None)

@@ -11,7 +11,7 @@ import asyncio
 import json
 import re
 from typing import Any
-from urllib.parse import quote, urljoin
+from urllib.parse import quote, urljoin, urlparse
 
 from .auth import KitError, KitSession, safe_url
 from .config import CAMPUS_BASE, PATHS, SERVICES, Settings, load_settings
@@ -26,6 +26,7 @@ from .parsers import (
     page_title,
     parse_credits,
     parse_detail_line,
+    parse_exam_inspection,
     parse_study_tree,
     parse_tables,
 )
@@ -45,6 +46,7 @@ class KitCampusClient:
         self._tguid: str | None = None
         self._term: str | None = None
         self._programs: list[dict[str, str]] | None = None
+        self._exam_reviews: dict[str, str | None] = {}
 
     async def __aenter__(self) -> KitCampusClient:
         return self
@@ -345,7 +347,7 @@ class KitCampusClient:
         """Fetch and parse the study tree that carries every result."""
         guid = await self._program_guid(program_guid)
         html, final = await self.session.fetch_authenticated(_url("study_tree", pguid=guid))
-        nodes = parse_study_tree(html)
+        nodes = parse_study_tree(html, final)
         if not nodes:
             # A stale CAS session or an intermittent HTTP-200 error page can
             # arrive even after portal SSO succeeded. Refresh once, then fail
@@ -353,7 +355,7 @@ class KitCampusClient:
             await asyncio.sleep(2)
             await self.session.token(force=True)
             html, final = await self.session.fetch_authenticated(_url("study_tree", pguid=guid))
-            nodes = parse_study_tree(html)
+            nodes = parse_study_tree(html, final)
         if not nodes:
             from bs4 import BeautifulSoup
 
@@ -394,6 +396,21 @@ class KitCampusClient:
             seen.add(key)
             results.append(node.as_result())
         passed = [r for r in results if r["outcome"] == "passed"]
+        for result in results:
+            if not str(result["grade_raw"]).strip().startswith("("):
+                continue
+            exam_url = result.get("exam_url")
+            result["inspection_notice"] = None
+            result["inspection_unavailable"] = False
+            if not exam_url or urlparse(exam_url).hostname != urlparse(CAMPUS_BASE).hostname:
+                continue
+            try:
+                if exam_url not in self._exam_reviews:
+                    exam_html, _ = await self.session.fetch_authenticated(exam_url)
+                    self._exam_reviews[exam_url] = parse_exam_inspection(exam_html)
+                result["inspection_notice"] = self._exam_reviews[exam_url]
+            except KitError:
+                result["inspection_unavailable"] = True
         root = next((n for n in nodes if n.kind == "product"), None)
         return {
             "program_guid": guid,

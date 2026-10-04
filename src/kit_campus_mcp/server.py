@@ -450,7 +450,8 @@ async def kit_get_grades(params: ProgramInput) -> str:
                            "grade": float|null, "grade_raw": str,
                            "outcome": "passed"|"failed"|"open",
                            "credits": float|null, "credits_required": float|null,
-                           "date": str, "attempt": str, "kind": str}]}
+                           "date": str, "attempt": str, "kind": str,
+                           "inspection_notice": str|null}]}
         `grade_raw` is "be" for a passed ungraded Teilleistung, otherwise the
         German grade ("2,7"). `average` and the credit totals are the official
         figures the portal computes, not a re-derivation.
@@ -490,6 +491,7 @@ async def kit_get_grades(params: ProgramInput) -> str:
             ("credits", "ECTS"),
             ("date", "Date"),
             ("outcome", "Result"),
+            ("inspection_notice", "Exam inspection"),
         ],
     )
     return "\n".join(lines)

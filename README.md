@@ -111,6 +111,12 @@ Or in a client config file:
 Results come from the study tree on `contractview.asp`, whose `brick`
 (Teilleistung) rows are the actual exam results - `M-…` modules and the sections
 above them are aggregates. A grade of `be` means *bestanden* (passed, ungraded).
+
+Numeric grades in parentheses also count as passed up to 4.0. Credit totals
+remain the LP actually posted by KIT. For parenthesized grades, the Telegram
+reply reads the linked exam page for an Einsicht announcement, including its
+published time and place. Missing announcements are shown as unavailable;
+exam dates are never used as inspection dates.
 A Teilleistung counted in two sections appears twice in the raw page; the client
 de-duplicates it so totals and notifications stay correct.
 

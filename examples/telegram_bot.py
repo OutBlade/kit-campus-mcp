@@ -20,6 +20,7 @@ import asyncio
 import json
 import os
 import sys
+from contextlib import AsyncExitStack
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -38,6 +39,7 @@ from kit_campus_mcp.watch import (
     SnapshotStore,
     check,
     format_grade_change,
+    format_inspection,
 )
 
 API = "https://api.telegram.org/bot{token}/{method}"
@@ -140,14 +142,19 @@ def _split(text: str, limit: int = 3900) -> list[str]:
     return chunks
 
 
-async def poll_kit() -> list[str]:
+async def poll_kit(client: KitCampusClient | None = None) -> list[str]:
     """Poll KIT once and return the notification lines for what changed."""
     settings = load_settings()
     store = SnapshotStore(settings.snapshot_file)
     messages: list[str] = []
 
-    async with KitCampusClient(settings) as client:
+    async with AsyncExitStack() as stack:
+        if client is None:
+            client = await stack.enter_async_context(KitCampusClient(settings))
         grades = await client.get_grades()
+        store.put("grade_totals", [{
+            key: grades[key] for key in ("passed", "count", "credits_earned", "average")
+        }])
         result = check(store, "grades", grades["results"], GRADE_KEY, GRADE_WATCHED)
         if result["first_run"]:
             print(f"Baseline stored ({result['count']} results); staying quiet this run.")
@@ -176,7 +183,7 @@ async def poll_kit() -> list[str]:
     return messages
 
 
-async def handle_command(text: str, *, allow_cached: bool = True) -> str:
+async def handle_command(text: str, *, allow_cached: bool = True, client: KitCampusClient | None = None) -> str:
     """Answer one chat command."""
     parts = text.strip().split()
     command = parts[0].lower().lstrip("/").split("@")[0]
@@ -185,7 +192,9 @@ async def handle_command(text: str, *, allow_cached: bool = True) -> str:
     if command in {"start", "hilfe", "help"}:
         return HELP
 
-    async with KitCampusClient() as client:
+    async with AsyncExitStack() as stack:
+        if client is None:
+            client = await stack.enter_async_context(KitCampusClient())
         if command in {"noten", "grades"}:
             try:
                 data = await client.get_grades()
@@ -209,6 +218,9 @@ async def handle_command(text: str, *, allow_cached: bool = True) -> str:
                 lines.append(
                     f"{mark} {result['grade_raw'] or '--':>4}  {result['title']}"
                 )
+                inspection = format_inspection(result)
+                if inspection:
+                    lines.append("  " + inspection)
             return "\n".join(lines)
 
         if command in {"pruefungen", "exams"}:
@@ -270,7 +282,7 @@ def _cached_grades_reply() -> str | None:
     lines = [
         (
             "KIT ist gerade nicht erreichbar. Das ist der letzte gespeicherte Stand, "
-            "nicht live geprüft."
+            "nicht live geprÃ¼ft."
         ),
         f"Stand: {timestamp}",
         "",
@@ -280,19 +292,30 @@ def _cached_grades_reply() -> str | None:
         float(result.get("credits") or 0)
         for result in results if result.get("outcome") == "passed"
     )
-    summary = f"{passed}/{len(results)} bestanden, {credits:g} LP"
+    totals = store.get("grade_totals")
+    if totals:
+        total = totals[0]
+        summary = (
+            f"{total['passed']}/{total['count']} bestanden, "
+            f"{total['credits_earned']} LP, Schnitt {total['average']}"
+        )
+    else:
+        summary = f"{passed}/{len(results)} bestanden, {credits:g} LP"
     lines.extend([summary, ""])
     for result in results:
         mark = {"passed": "+", "failed": "-", "open": "?"}.get(
             result.get("outcome"), " "
         )
         grade = result.get("grade_raw") or result.get("grade") or "--"
-        title = result.get("title") or result.get("code") or "Prüfung"
+        title = result.get("title") or result.get("code") or "PrÃ¼fung"
         lines.append(f"{mark} {grade:>4}  {title}")
+        inspection = format_inspection(result)
+        if inspection:
+            lines.append("  " + inspection)
     return "\n".join(lines)
 
 
-async def drain_commands(bot: Telegram) -> int:
+async def drain_commands(bot: Telegram, client: KitCampusClient | None = None) -> int:
     """Answer whatever commands arrived since the last run, then return.
 
     This is what makes chat commands work on a scheduled host: there is no
@@ -325,7 +348,7 @@ async def drain_commands(bot: Telegram) -> int:
             print("Ignoring Telegram command from an unconfigured chat; check TELEGRAM_CHAT_ID.")
             continue
         try:
-            reply = await handle_command(text)
+            reply = await handle_command(text, client=client)
         except Exception as exc:  # noqa: BLE001 - report back to the chat
             reply = f"Fehler: {type(exc).__name__}: {exc}"
         await bot.send(reply, chat_id)
@@ -409,26 +432,26 @@ async def main() -> int:
 
     bot = Telegram(token, chat_id)
     try:
+        if args.once:
+            async with KitCampusClient() as client:
+                answered = 0
+                if not args.no_commands:
+                    answered = await drain_commands(bot, client=client)
+                    print(f"Answered {answered} pending command(s).")
+                if args.ping:
+                    await bot.send(await handle_command("/noten", allow_cached=False, client=client))
+                    print("Fresh grades read and sent to Telegram.")
+                messages = await poll_kit(client=client)
+                if messages:
+                    await bot.send("\n".join(messages))
+                    print(f"Sent {len(messages)} notification lines.")
+                else:
+                    print("No changes.")
+            return 0
+
         if args.ping:
-            # Verify the same grade command used in the Telegram chat.
             await bot.send(await handle_command("/noten", allow_cached=False))
             print("Fresh grades read and sent to Telegram.")
-            if not args.once:
-                return 0
-
-        if args.once:
-            # Answer commands before the scheduled background poll. A temporary
-            # KIT outage must not prevent /noten or /status from being handled.
-            answered = 0
-            if not args.no_commands:
-                answered = await drain_commands(bot)
-                print(f"Answered {answered} pending command(s).")
-            messages = await poll_kit()
-            if messages:
-                await bot.send("\n".join(messages))
-                print(f"Sent {len(messages)} notification lines.")
-            else:
-                print("No changes.")
             return 0
 
         print(f"Watching KIT every {args.interval}s. Ctrl+C to stop.")
