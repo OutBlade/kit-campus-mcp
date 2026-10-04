@@ -309,6 +309,8 @@ class KitSession:
                     response = await self._browser_get(url, **kwargs)
             except (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError) as exc:
                 reason = type(exc).__name__
+            except KitTemporaryError:
+                reason = "Browser student page not ready"
             except httpx.HTTPError as exc:
                 raise KitRequestError(
                     f"{method} {safe_url(url)} failed ({type(exc).__name__})."
@@ -347,7 +349,7 @@ class KitSession:
                 "and run python -m playwright install chromium."
             ) from None
         except Exception as exc:
-            raise KitRequestError(
+            raise KitTemporaryError(
                 f"KIT browser verification failed ({type(exc).__name__}). "
                 "No result snapshot was replaced."
             ) from None

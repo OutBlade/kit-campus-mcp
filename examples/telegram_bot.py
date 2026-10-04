@@ -158,7 +158,7 @@ async def poll_kit() -> list[str]:
             if result["changes"]:
                 messages.append(
                     f"\nGesamt: {grades['passed']}/{grades['count']} bestanden, "
-                    f"{_credits_summary(grades)}, Schnitt {grades['average']}"
+                    f"{grades['credits_earned']} LP, Schnitt {grades['average']}"
                 )
         try:
             exams = await client.list_registered_exams()
@@ -176,7 +176,7 @@ async def poll_kit() -> list[str]:
     return messages
 
 
-async def handle_command(text: str) -> str:
+async def handle_command(text: str, *, allow_cached: bool = True) -> str:
     """Answer one chat command."""
     parts = text.strip().split()
     command = parts[0].lower().lstrip("/").split("@")[0]
@@ -189,7 +189,10 @@ async def handle_command(text: str) -> str:
         if command in {"noten", "grades"}:
             try:
                 data = await client.get_grades()
-            except KitTemporaryError:
+            except KitTemporaryError as exc:
+                if not allow_cached:
+                    raise
+                print(f"Telegram grades read deferred: {exc}")
                 cached = _cached_grades_reply()
                 if cached is not None:
                     return cached
@@ -197,7 +200,7 @@ async def handle_command(text: str) -> str:
             lines = [
                 (
                     f"{data['passed']}/{data['count']} bestanden, "
-                    f"{_credits_summary(data)}, Schnitt {data['average']}"
+                    f"{data['credits_earned']} LP, Schnitt {data['average']}"
                 ),
                 "",
             ]
@@ -226,7 +229,7 @@ async def handle_command(text: str) -> str:
                 f"Login ok.\n"
                 f"Studiengang: {programs[0]['title']}\n"
                 f"{data['passed']}/{data['count']} bestanden, "
-                f"{_credits_summary(data)}, Schnitt {data['average']}"
+                f"{data['credits_earned']} LP, Schnitt {data['average']}"
             )
 
         if command in {"modul", "module"}:
@@ -277,19 +280,7 @@ def _cached_grades_reply() -> str | None:
         float(result.get("credits") or 0)
         for result in results if result.get("outcome") == "passed"
     )
-    provisional = 0.0
-    for result in results:
-        raw_grade = str(result.get("grade_raw") or "").strip()
-        if result.get("outcome") == "passed" and raw_grade.startswith("(") and raw_grade.endswith(")"):
-            missing = max(
-                float(result.get("credits_required") or 0) - float(result.get("credits") or 0),
-                0.0,
-            )
-            credits += missing
-            provisional += missing
     summary = f"{passed}/{len(results)} bestanden, {credits:g} LP"
-    if provisional:
-        summary += f" (davon {provisional:g} vorläufig)"
     lines.extend([summary, ""])
     for result in results:
         mark = {"passed": "+", "failed": "-", "open": "?"}.get(
@@ -299,14 +290,6 @@ def _cached_grades_reply() -> str | None:
         title = result.get("title") or result.get("code") or "Prüfung"
         lines.append(f"{mark} {grade:>4}  {title}")
     return "\n".join(lines)
-
-
-def _credits_summary(data: dict[str, Any]) -> str:
-    credits = f"{data['credits_earned']} LP"
-    provisional = data.get("credits_provisional") or 0
-    if provisional:
-        credits += f" (davon {provisional:g} vorläufig)"
-    return credits
 
 
 async def drain_commands(bot: Telegram) -> int:
@@ -428,8 +411,8 @@ async def main() -> int:
     try:
         if args.ping:
             # Verify the same grade command used in the Telegram chat.
-            await bot.send(await handle_command("/noten"))
-            print("Ping sent.")
+            await bot.send(await handle_command("/noten", allow_cached=False))
+            print("Fresh grades read and sent to Telegram.")
             if not args.once:
                 return 0
 

@@ -40,7 +40,7 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.has_result)
         self.assertEqual(result.outcome, "passed")
 
-    async def test_passed_provisional_credits_are_included_in_total(self):
+    async def test_parenthesized_grade_does_not_invent_credits(self):
         html = """<table id="specific-contract-tree">
         <tr class="product hierarchy1"><td></td><td>Example degree</td><td></td><td></td>
         <td></td><td></td><td>35</td><td>180</td></tr>
@@ -55,10 +55,9 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
         finally:
             await client.close()
         self.assertEqual(data["passed"], 1)
-        self.assertEqual(data["credits_official"], 35.0)
-        self.assertEqual(data["credits_provisional"], 8.0)
-        self.assertEqual(data["credits_earned"], 43.0)
-        self.assertEqual(data["results"][0]["credits_counted"], 8.0)
+        self.assertEqual(data["credits_earned"], 35.0)
+        self.assertNotIn("credits_provisional", data)
+        self.assertEqual(data["results"][0]["credits"], 0.0)
 
     async def asyncSetUp(self):
         self.temp = tempfile.TemporaryDirectory()

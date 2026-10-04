@@ -1,94 +1,38 @@
-"""Read-only comparison with the portal's current iframe request."""
+"""Read-only inspection of SSO readiness and exam-review metadata."""
 import asyncio
 import re
-from urllib.parse import urlencode, urlparse
-
-from kit_campus_mcp.client import KitCampusClient
-from kit_campus_mcp.auth import _with_token, _needs_login
-from kit_campus_mcp.config import CAMPUS_BASE, PORTAL_BASE
-from kit_campus_mcp.parsers import parse_study_tree
+from urllib.parse import urljoin, urlparse, parse_qsl
 from bs4 import BeautifulSoup
-from playwright.async_api import async_playwright
-
+from kit_campus_mcp.client import KitCampusClient, _url
+from kit_campus_mcp.parsers import clean_text
 
 async def main():
     async with KitCampusClient() as client:
         guid = await client._program_guid(None)
-        term = await client._term_guid()
-        token = await client.session.token()
-        path = '/campus/student/contractview.asp?' + urlencode({'gguid': guid})
-        full = path + '&' + urlencode({'pguid': guid, 'tguid': term, 'lang': 'de'})
-        variants = {
-            'direct': _with_token(CAMPUS_BASE + path, token),
-            'direct-selectors': _with_token(CAMPUS_BASE + full, token),
-            'portal': PORTAL_BASE + '/redirect.php?' + urlencode({'system': 'cascampus', 'url': path}),
-            'portal-selectors': PORTAL_BASE + '/redirect.php?' + urlencode({'system': 'cascampus', 'url': full}),
-            'no-guid': _with_token(CAMPUS_BASE + '/campus/student/contractview.asp', token),
-            'study-progress': _with_token(CAMPUS_BASE + '/campus/student/courseofstudies.asp?' + urlencode({'gguid': guid}), token),
-            'registered-exams': _with_token(CAMPUS_BASE + '/campus/student/registrationlist.asp?type=exam&filter=registered', token),
-            'backend-login': _with_token(CAMPUS_BASE + '/campus/login/login.asp', token),
-            'session-only': CAMPUS_BASE + full,
-        }
-        for name, url in variants.items():
-            try:
-                response = await client.session._client.get(url, timeout=30)
-                print(f'{name}: HTTP {response.status_code}; tree_rows={len(parse_study_tree(response.text))}; final_path={urlparse(str(response.url)).path}', flush=True)
-                text = BeautifulSoup(response.text, 'html.parser').get_text(' ', strip=True).lower()
-                indicators = [word for word in ('service unavailable', 'maintenance', 'wartung', 'database', 'sql', 'iis', 'runtime error', 'temporarily', 'overloaded') if word in text]
-                print(f'{name}: bytes={len(response.content)}; indicators={indicators}', flush=True)
-                if response.status_code == 503:
-                    for secret in (token.token_a, token.token_b, token.username, token.firstname, token.lastname, token.matriculation_number, guid, term, client.settings.password):
-                        if secret:
-                            text = text.replace(str(secret).lower(), '<redacted>')
-                    text = re.sub(r'https?://\S+', '<url>', text)
-                    text = re.sub(r'[a-z0-9+/=_%-]{20,}', '<redacted>', text)
-                    print(f'{name}: error_text={text[:500]}', flush=True)
-            except Exception as exc:
-                print(f'{name}: {type(exc).__name__}', flush=True)
-        async with async_playwright() as p:
-            browser = await p.chromium.launch()
-            context = await browser.new_context(locale='de-DE')
-            cookies = []
-            for c in client.session._client.cookies.jar:
-                entry = {'name': c.name, 'value': c.value, 'domain': c.domain, 'path': c.path or '/', 'secure': c.secure}
-                if c.expires and c.expires > 0:
-                    entry['expires'] = c.expires
-                cookies.append(entry)
-            await context.add_cookies(cookies)
-            page = await context.new_page()
-            try:
-                await page.goto(variants['direct-selectors'], wait_until='domcontentloaded', timeout=60000)
-                try:
-                    await page.wait_for_function("!document.body.innerText.toLowerCase().includes('verifying your browser')", timeout=45000)
-                except Exception:
-                    pass
-                await page.wait_for_timeout(3000)
-                html = await page.content()
-                if not parse_study_tree(html):
-                    await page.goto(variants['portal-selectors'], wait_until='domcontentloaded', timeout=60000)
-                    await page.wait_for_timeout(5000)
-                    html = await page.content()
-                if not parse_study_tree(html):
-                    await page.goto(PORTAL_BASE + '/exams/registration.php', wait_until='domcontentloaded', timeout=60000)
-                    for _ in range(45):
-                        for frame in page.frames:
-                            try:
-                                candidate = await frame.content()
-                            except Exception:
-                                continue
-                            if parse_study_tree(candidate):
-                                html = candidate
-                                break
-                        if parse_study_tree(html):
-                            break
-                        await asyncio.sleep(1)
-                    print(f'browser: frame_paths={[urlparse(f.url).path for f in page.frames]}', flush=True)
-                print(f"browser: tree_rows={len(parse_study_tree(html))}; challenge={'verifying your browser' in html.lower()}; final_path={urlparse(page.url).path}", flush=True)
-                soup = BeautifulSoup(html, 'html.parser')
-                print(f"browser: needs_login={_needs_login(html, page.url)}; tables={[t.get('id') for t in soup.find_all('table')][:10]}; row_classes={sorted({c for r in soup.find_all('tr') for c in r.get('class', [])})[:20]}", flush=True)
-            except Exception as exc:
-                print(f'browser: {type(exc).__name__}', flush=True)
-            await browser.close()
-
+        html, final = await client.session.fetch_authenticated(_url("study_tree", pguid=guid))
+        soup = BeautifulSoup(html, "html.parser")
+        table = soup.find("table", id="specific-contract-tree")
+        assert table is not None, "Study tree was not read"
+        print("Authenticated study tree read successfully.", flush=True)
+        for row in table.find_all("tr", class_="brick"):
+            cells = row.find_all("td")
+            if len(cells) < 5 or not clean_text(cells[4].get_text()).startswith("("):
+                continue
+            for idx, cell in enumerate(cells):
+                for tag in [cell, *cell.find_all(True)]:
+                    for key in ("title", "data-content", "data-original-title", "aria-label"):
+                        text = clean_text(str(tag.get(key) or ""))
+                        if text:
+                            text = re.sub(r"0x[0-9A-Fa-f]+", "[id]", text)
+                            print(f"Cell {idx} {key}: {text[:700]}", flush=True)
+                for link in cell.find_all("a"):
+                    href = link.get("href", "")
+                    parsed = urlparse(href)
+                    onclick = link.get("onclick", "")
+                    functions = re.findall(r"([a-zA-Z_][\w]*)\s*\(", onclick)
+                    print(f"Cell {idx} link path={parsed.path[:100]} query_keys={[k for k,v in parse_qsl(parsed.query)]} functions={functions}", flush=True)
+            for text in row.stripped_strings:
+                if "einsicht" in text.lower(): print("Review metadata:", clean_text(text)[:700], flush=True)
+        print("Diagnostics complete; no Telegram messages or state writes.", flush=True)
 
 asyncio.run(main())

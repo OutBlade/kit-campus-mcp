@@ -64,13 +64,9 @@ async def cmd_grades(args: argparse.Namespace) -> int:
     if args.json:
         _print(data)
         return 0
-    provisional = (
-        f" (including {data['credits_provisional']:g} provisional)"
-        if data["credits_provisional"] else ""
-    )
     print(
-        f"{data['passed']}/{data['count']} passed, "
-        f"{data['credits_earned']} ECTS{provisional}, average {data['average']}"
+        f"{data['passed']}/{data['count']} passed, {data['credits_earned']} ECTS, "
+        f"average {data['average']}"
     )
     for result in data["results"]:
         print(

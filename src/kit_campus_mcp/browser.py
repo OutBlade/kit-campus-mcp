@@ -5,9 +5,12 @@ Cookies remain in memory. No browser profile or page content is written to disk.
 from __future__ import annotations
 
 import asyncio
+import http.cookiejar
 import time
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse
+
+from bs4 import BeautifulSoup
 
 from .config import PORTAL_BASE
 
@@ -15,6 +18,12 @@ from .config import PORTAL_BASE
 def is_browser_challenge(html: str) -> bool:
     text = html.lower()
     return "verifying your browser" in text and "javascript is required" in text
+
+
+def is_auth_transition(html: str) -> bool:
+    """Do not return an intermediate SSO document as the requested page."""
+    soup = BeautifulSoup(html, "html.parser")
+    return soup.find("input", attrs={"name": ["SAMLResponse", "SAMLRequest", "j_username"]}) is not None
 
 
 class BrowserReader:
@@ -76,13 +85,33 @@ class BrowserReader:
                     html = await frame.content()
                 except Exception:
                     continue  # The portal can replace its iframe after login.
-                if is_browser_challenge(html):
+                if is_browser_challenge(html) or is_auth_transition(html):
                     continue
                 response = self._responses.get(frame)
                 if response is not None:
+                    if response.status < 400 and target.path.endswith("/contractview.asp"):
+                        if BeautifulSoup(html, "html.parser").find("table", id="specific-contract-tree") is None:
+                            continue
+                    await self._sync_cookies()
                     return response.status, html, frame.url
             await asyncio.sleep(1)
         raise RuntimeError("KIT browser verification or student page loading did not complete.")
+
+    async def _sync_cookies(self) -> None:
+        """Keep the HTTP session aligned with the browser's completed SSO."""
+        for item in await self._context.cookies():
+            domain = item["domain"]
+            expires = item.get("expires", -1)
+            self.cookiejar.set_cookie(http.cookiejar.Cookie(
+                version=0, name=item["name"], value=item["value"],
+                port=None, port_specified=False, domain=domain,
+                domain_specified=domain.startswith("."), domain_initial_dot=domain.startswith("."),
+                path=item.get("path", "/"), path_specified=True,
+                secure=item.get("secure", False),
+                expires=int(expires) if expires > 0 else None,
+                discard=expires <= 0, comment=None, comment_url=None,
+                rest={"HttpOnly": None} if item.get("httpOnly") else {}, rfc2109=False,
+            ))
 
     async def close(self) -> None:
         if self._browser is not None:
