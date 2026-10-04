@@ -149,6 +149,37 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(html, TREE)
         self.assertNotIn("SECRET", url)
 
+    async def test_javascript_challenge_uses_browser_without_repeating_http(self):
+        calls = []
+        def handler(request):
+            calls.append(request)
+            return httpx.Response(503, text='Verifying your browser... JavaScript is required to continue.')
+        self.transport(handler)
+        self.session._browser_get = AsyncMock(return_value=httpx.Response(
+            200, text=TREE, request=httpx.Request('GET', SENSITIVE_URL)
+        ))
+        html, _ = await self.session.get(SENSITIVE_URL)
+        self.assertEqual(html, TREE)
+        self.assertEqual(len(calls), 1)
+        self.session._browser_get.assert_awaited_once()
+        self.mock_sleep.assert_not_awaited()
+
+    async def test_challenge_does_not_replay_post_in_browser(self):
+        self.transport(lambda request: httpx.Response(
+            503, text='Verifying your browser... JavaScript is required to continue.'
+        ))
+        self.session._browser_get = AsyncMock()
+        with self.assertRaises(KitTemporaryError):
+            await self.session.post(SENSITIVE_URL, {'password': 'SECRET'})
+        self.session._browser_get.assert_not_awaited()
+
+    async def test_browser_failure_hides_sensitive_error_details(self):
+        self.session._browser = AsyncMock()
+        self.session._browser.get.side_effect = RuntimeError('SECRET')
+        with self.assertRaises(KitRequestError) as caught:
+            await self.session._browser_get(SENSITIVE_URL)
+        self.assertNotIn('SECRET', str(caught.exception))
+
 
 class WorkflowTests(unittest.IsolatedAsyncioTestCase):
     async def test_persistent_timeout_is_temporary(self):

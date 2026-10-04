@@ -34,6 +34,7 @@ from bs4 import BeautifulSoup
 
 from .config import (
     DEFAULT_ENCODING,
+    CAMPUS_BASE,
     FALLBACK_ENCODING,
     PORTAL_BASE,
     PORTAL_LOGIN_TARGET,
@@ -254,6 +255,7 @@ class KitSession:
         self._logged_in = False
         self._token: KitToken | None = None
         self._token_attempted = False
+        self._browser = None
 
     async def __aenter__(self) -> KitSession:
         return self
@@ -263,6 +265,8 @@ class KitSession:
 
     async def close(self) -> None:
         self.save_cookies()
+        if self._browser is not None:
+            await self._browser.close()
         await self._client.aclose()
 
     def save_cookies(self) -> None:
@@ -289,7 +293,19 @@ class KitSession:
         for attempt in range(1, attempts + 1):
             response = None
             try:
-                response = await self._client.request(method, url, **kwargs)
+                from .browser import is_browser_challenge
+                use_browser = (
+                    method == "GET" and self._browser is not None
+                    and urlparse(url).hostname == urlparse(CAMPUS_BASE).hostname
+                    and urlparse(url).path.startswith("/campus/")
+                )
+                if use_browser:
+                    response = await self._browser_get(url, **kwargs)
+                else:
+                    response = await self._client.request(method, url, **kwargs)
+                if method == "GET" and response.status_code == 503 and is_browser_challenge(_decode(response)):
+                    logger.warning("KIT requires JavaScript browser verification; rendering %s", safe_url(url))
+                    response = await self._browser_get(url, **kwargs)
             except (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError) as exc:
                 reason = type(exc).__name__
             except httpx.HTTPError as exc:
@@ -316,6 +332,25 @@ class KitSession:
             )
             await asyncio.sleep(delay)
         raise AssertionError("unreachable")
+
+    async def _browser_get(self, url: str, **kwargs: Any) -> httpx.Response:
+        from .browser import BrowserReader
+        if self._browser is None:
+            self._browser = BrowserReader(self._client.cookies.jar)
+        target = str(httpx.Request("GET", url, params=kwargs.get("params")).url)
+        try:
+            status, html, final = await self._browser.get(target)
+        except ImportError:
+            raise KitRequestError(
+                "KIT requires JavaScript verification. Install kit-campus-mcp[browser] "
+                "and run python -m playwright install chromium."
+            ) from None
+        except Exception as exc:
+            raise KitRequestError(
+                f"KIT browser verification failed ({type(exc).__name__}). "
+                "No result snapshot was replaced."
+            ) from None
+        return httpx.Response(status, text=html, request=httpx.Request("GET", final))
 
     async def submit(self, form: HtmlForm) -> tuple[str, str]:
         if form.method == "post":

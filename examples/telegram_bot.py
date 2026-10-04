@@ -400,7 +400,8 @@ async def main() -> int:
     bot = Telegram(token, chat_id)
     try:
         if args.ping:
-            await bot.send(await handle_command("/status"))
+            # Verify the same grade command used in the Telegram chat.
+            await bot.send(await handle_command("/noten"))
             print("Ping sent.")
             if not args.once:
                 return 0

@@ -184,6 +184,12 @@ still does not return a study tree, the job fails and preserves the last snapsho
 rather than treating an empty list as a successful check. Diagnostics omit login
 tokens and response bodies.
 
+KIT can also return HTTP 503 for a JavaScript browser verification page. The
+client detects that page and loads the official portal iframe in Chromium.
+Install browser support with `pip install -e '.[browser]'`, followed by
+`python -m playwright install chromium`. The hosted workflow installs this
+automatically. Browser sessions stay in memory and are closed after each run.
+
 When a temporary outage persists after the retries, the CLI exits with code 75
 and the scheduled workflow records **DEFERRED** in its warning and run summary.
 It skips the state commit and tries again on the next schedule. GitHub marks the
@@ -195,7 +201,7 @@ changes, and Telegram delivery failures still fail visibly.
 Run the offline regression checks with `python -m unittest discover -s tests -v`.
 
 Chat commands still work on a schedule: each run answers whatever arrived since
-the last one, so a `/noten` is replied to within the hour rather than instantly.
+the last one. `/noten` replies at the next run; GitHub schedules can be delayed.
 For instant replies, run the bot locally (or on any always-on host) without
 `--once`.
 
