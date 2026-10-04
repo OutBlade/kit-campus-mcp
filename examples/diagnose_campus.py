@@ -68,17 +68,24 @@ async def main():
                     await page.goto(variants['portal-selectors'], wait_until='domcontentloaded', timeout=60000)
                     await page.wait_for_timeout(5000)
                     html = await page.content()
+                if not parse_study_tree(html):
+                    await page.goto(PORTAL_BASE + '/exams/registration.php', wait_until='domcontentloaded', timeout=60000)
+                    for _ in range(45):
+                        for frame in page.frames:
+                            try:
+                                candidate = await frame.content()
+                            except Exception:
+                                continue
+                            if parse_study_tree(candidate):
+                                html = candidate
+                                break
+                        if parse_study_tree(html):
+                            break
+                        await asyncio.sleep(1)
+                    print(f'browser: frame_paths={[urlparse(f.url).path for f in page.frames]}', flush=True)
                 print(f"browser: tree_rows={len(parse_study_tree(html))}; challenge={'verifying your browser' in html.lower()}; final_path={urlparse(page.url).path}", flush=True)
                 soup = BeautifulSoup(html, 'html.parser')
                 print(f"browser: needs_login={_needs_login(html, page.url)}; tables={[t.get('id') for t in soup.find_all('table')][:10]}; row_classes={sorted({c for r in soup.find_all('tr') for c in r.get('class', [])})[:20]}", flush=True)
-                text = soup.get_text(' ', strip=True).lower()
-                for secret in (token.token_a, token.token_b, token.username, token.firstname, token.lastname, token.matriculation_number, guid, term, client.settings.password):
-                    if secret:
-                        text = text.replace(str(secret).lower(), '<redacted>')
-                text = re.sub(r'https?://\S+', '<url>', text)
-                text = re.sub(r'[a-z0-9+/=_%-]{20,}', '<redacted>', text)
-                if not parse_study_tree(html):
-                    print(f'browser: diagnostic_text={text[:500]}', flush=True)
             except Exception as exc:
                 print(f'browser: {type(exc).__name__}', flush=True)
             await browser.close()

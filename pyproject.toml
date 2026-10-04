@@ -12,8 +12,12 @@ dependencies = [
     # cryptography arrives transitively via mcp -> pyjwt[crypto]. 46.0.3 is the
     # last release with a win_arm64 wheel; anything newer is built from source
     # on ARM64 Windows and needs a Rust toolchain. Pin it on that platform only.
-    "cryptography<=46.0.3; platform_system == 'Windows' and platform_machine == 'ARM64'",
+    "cryptography>=43,<=46.0.3; platform_system == 'Windows' and platform_machine == 'ARM64'",
+    "cryptography>=43; platform_system != 'Windows' or platform_machine != 'ARM64'",
 ]
+
+[project.optional-dependencies]
+browser = ["playwright>=1.50,<2"]
 
 [project.scripts]
 kit-campus-mcp = "kit_campus_mcp.server:main"

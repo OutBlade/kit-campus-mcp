@@ -7,6 +7,7 @@ restarts. This module keeps the last seen state on disk and diffs against it.
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -58,6 +59,16 @@ class SnapshotStore:
                 self._data = json.loads(path.read_text(encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
                 self._data = {}
+            if self._data.get("format") == "kit-campus-encrypted-v1":
+                key = os.environ.get("KIT_CAMPUS_STATE_KEY")
+                if not key:
+                    raise RuntimeError("Encrypted snapshot requires KIT_CAMPUS_STATE_KEY.")
+                from cryptography.fernet import Fernet, InvalidToken
+                try:
+                    raw = Fernet(key.encode()).decrypt(self._data["ciphertext"].encode())
+                    self._data = json.loads(raw)
+                except (InvalidToken, ValueError, KeyError):
+                    raise RuntimeError("Cannot decrypt snapshot with KIT_CAMPUS_STATE_KEY.") from None
 
     def get(self, key: str) -> list[dict[str, Any]] | None:
         record = self._data.get(key)
@@ -78,9 +89,15 @@ class SnapshotStore:
 
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(
-            json.dumps(self._data, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        payload = json.dumps(self._data, ensure_ascii=False, indent=2)
+        key = os.environ.get("KIT_CAMPUS_STATE_KEY")
+        if key:
+            from cryptography.fernet import Fernet
+            payload = json.dumps({
+                "format": "kit-campus-encrypted-v1",
+                "ciphertext": Fernet(key.encode()).encrypt(payload.encode()).decode(),
+            }, indent=2)
+        self.path.write_text(payload, encoding="utf-8")
 
     def reset(self, key: str | None = None) -> None:
         if key is None:

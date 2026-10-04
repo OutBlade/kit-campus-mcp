@@ -154,7 +154,11 @@ The snapshot lives in `state/snapshots.json` and is committed back by the
 workflow after every run, which is how a stateless runner remembers what it has
 already reported. Session cookies are gitignored and never leave the runner.
 
-**Keep the repository private** - the snapshot contains your results.
+Grade snapshots are encrypted when `KIT_CAMPUS_STATE_KEY` is configured. The
+hosted workflow requires this secret before it can write state. Use a Fernet key
+(`Fernet.generate_key()` from `cryptography`) and keep a private backup; losing
+the key makes saved snapshots unreadable. Local clients use the same environment
+variable. Cookies and `.env` stay excluded from Git.
 
 Trigger a run by hand, optionally sending the current standing as a health
 check:

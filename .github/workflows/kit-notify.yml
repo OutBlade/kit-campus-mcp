@@ -39,7 +39,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install
-        run: pip install --quiet -e .
+        run: pip install --quiet -e '.[browser]'
+
+      - name: Install Chromium for KIT browser verification
+        run: python -m playwright install --with-deps chromium --only-shell
 
       - name: Check KIT and notify
         id: campus
@@ -48,12 +51,17 @@ jobs:
           KIT_PASSWORD: ${{ secrets.KIT_PASSWORD }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          KIT_CAMPUS_STATE_KEY: ${{ secrets.KIT_CAMPUS_STATE_KEY }}
           # State lives in the repo so the schedule remembers what it reported.
           KIT_CAMPUS_STATE_DIR: ${{ github.workspace }}/state
           KIT_LANGUAGE: de
           CHECK_ONLY: ${{ inputs.check_only }}
           PING: ${{ inputs.ping }}
         run: |
+          if [ "$CHECK_ONLY" != "true" ] && [ -z "$KIT_CAMPUS_STATE_KEY" ]; then
+            echo "KIT_CAMPUS_STATE_KEY is required to keep grade snapshots encrypted."
+            exit 2
+          fi
           # Capture only the program's exit code; unexpected errors still fail.
           set +e
           if [ "$CHECK_ONLY" = "true" ]; then
@@ -76,7 +84,7 @@ jobs:
               {
                 echo "### DEFERRED: KIT temporarily unavailable"
                 echo "The portal did not provide results after retries. This is not a successful results check."
-                echo "No result snapshot or Telegram offset will be committed. The next scheduled run retries automatically."
+                echo "No result snapshot will be replaced. Answered Telegram commands keep their offset; the next scheduled run retries KIT automatically."
                 echo "See the check step for the HTTP status or timeout. Authentication and parsing errors still fail the job."
               } >> "$GITHUB_STEP_SUMMARY"
               ;;
